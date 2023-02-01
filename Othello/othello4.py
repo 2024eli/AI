@@ -1,0 +1,229 @@
+import sys;args = sys.argv[1:]
+if args and args[0] == '':
+  args.pop(0)
+import re;
+import random
+import time;
+
+def convertMoves(unformattedMoves, regex):
+  formatted = []
+  nextMovesList = uncondense(unformattedMoves)
+  for i in nextMovesList:
+    if "-" not in i:
+      if (x:=re.search(regex, i)):
+        col = ord(i[0].upper()) - 65
+        row = int(i[1])-1
+        formatted.append(row*8+col)
+      else:
+        formatted.append(int(i))
+  return formatted
+
+def uncondense(unformattedMoves):
+  formatted = []
+  for i in unformattedMoves:
+    movesString = i
+    if len(movesString) > 2:
+      j = 0
+      while j < len(movesString):
+        move = movesString[j]
+        if move == "_":
+          formatted.append(movesString[j + 1])
+        else:
+          formatted.append(movesString[j:j + 2])
+        j += 2
+    else:
+      formatted.append(i)
+  return formatted
+
+SIZE = 64
+WIDTH = 8
+dy = [0, 0, 1, -1, -1, 1, -1, 1]
+dx = [1, -1, 0, 0, 1, -1, -1, 1]
+corner_adj = {0: (1, 8, 9), 7:(6, 14, 15), 56:(57, 48, 49), 63:(62, 55, 54)}
+edges = [(0,1,2,3,4,5,6,7), (7,15,23,31,39,47,55,63),(56,57,58,59,60,61,62,63), (0,8,16,24,32,40,49,56)]
+formatMoves = "^[A-Za-z]\d*$"
+if args and len(args[0]) == 64:
+  BOARD = args[0].lower()
+  if len(args) >=2 and len(args[1]) == 1 and re.search("^[XOxo]$", args[1]):
+    TOKEN = args[1].lower()
+    LOM = convertMoves(args[2:], formatMoves)
+  else:
+    if (64-BOARD.count('.')) % 2 == 0: TOKEN = 'x'
+    else: TOKEN = 'o'
+    LOM = convertMoves(args[1:], formatMoves)
+else:
+  BOARD = '.'*27+'ox......xo'+'.'*27
+  if len(args) >=2 and len(args[0]) == 1 and re.search("^[XOxo]$", args[0]):
+    TOKEN = args[0].lower()
+    LOM = convertMoves(args[1:], formatMoves)
+  else:
+    if (64-BOARD.count('.')) % 2 == 0: TOKEN = 'x'
+    else: TOKEN = 'o'
+    LOM = convertMoves(args[0:], formatMoves)
+OPPTOKEN = "o" if TOKEN == 'x' else "x"
+# print("board: ", BOARD)
+# print("token: ", TOKEN)
+# print("List of Possible Moves: ", LOM)
+
+def findMoves(pzl, token):
+  # returns a set of all possible moves
+  opptoken = 'o'
+  if token.lower() == 'o': opptoken = "x"
+  posMoves = set()
+  for ct, it in enumerate(pzl):
+    if it == token:
+      row = ct // 8
+      col = ct % 8
+      for i in range(8):
+        newR = row+dy[i]
+        newC = col+dx[i]
+        ind = newR*8+newC
+        if 0 <= newR < 8 and 0 <= newC < 8 and pzl[ind] == opptoken:
+          while 0 <= newR < 8 and 0 <= newC < 8 and pzl[ind] == opptoken:
+            newR += dy[i]
+            newC += dx[i]
+            ind = newR*8+newC
+          if 0 <= newR < 8 and 0 <= newC < 8 and pzl[ind] == ".":
+            posMoves.add(ind)
+  return posMoves
+
+def makeMoves(pzl, token, move):
+  opptoken = 'o'
+  if token.lower() == 'o': opptoken = "x"
+  print()
+  passed = False
+  print(f"{token} plays to {move}")
+  newPzl = pzl[:move] + token + pzl[move + 1:]
+  newPzl = turn(newPzl, token, opptoken, move)
+  som = findMoves(newPzl, opptoken)
+  printpz(newPzl, som)
+  if som:
+    print(f"Possible moves for {opptoken}: ", *som)
+  else:  # MAKE IT WORK FOR PASSES
+    print("No moves possible")
+    passed = True
+  return som, newPzl, passed
+
+def turn(pzl, token, opptoken, move):
+  #turn all the opptokens in between affected by the move into the token
+  converted = set()
+  row = move // 8
+  col = move % 8
+  newPzl = pzl
+  for i in range(8):
+    runningSet = set()
+    newR = row + dy[i]
+    newC = col + dx[i]
+    ind = newR * 8 + newC
+    if 0 <= newR < 8 and 0 <= newC < 8 and pzl[ind] == opptoken:
+      while 0 <= newR < 8 and 0 <= newC < 8 and pzl[ind] == opptoken:
+        runningSet.add(ind)
+        newR += dy[i]
+        newC += dx[i]
+        ind = newR * 8 + newC
+      if 0 <= newR < 8 and 0 <= newC < 8 and pzl[ind] == token:
+        for itt in runningSet:
+          converted.add(itt)
+  for i in converted:
+    newPzl = newPzl[:i] + token + newPzl[i+1:]
+  return newPzl
+
+def playOthello3(pzl, token, opptoken):
+  start = time.process_time()
+  som = findMoves(pzl, token)
+  printpz(BOARD, som)
+  if som:
+    print(f"Possible moves for {token}: ", *som)
+    print()
+    count = 0
+    newPzl = BOARD
+    for i in LOM:
+      if count % 2 == 0:
+        som, newPzl, passed = makeMoves(newPzl, token, i)
+        if passed:
+          count+=1
+      else:
+        som, newPzl, passed = makeMoves(newPzl, opptoken, i)
+        if passed:
+          count+=1
+      count+=1
+  else:
+    print("No moves possible")
+    token, opptoken = opptoken, token
+    som = findMoves(pzl, token)
+    if som:
+      print(f"Possible moves for {token}: ", *som)
+      print()
+      count = 0
+      newPzl = BOARD
+      for i in LOM:
+        if count % 2 == 0:
+          som, newPzl, passed = makeMoves(newPzl, token, i)
+          if passed:
+            count += 1
+        else:
+          som, newPzl, passed = makeMoves(newPzl, opptoken, i)
+          if passed:
+            count += 1
+        count += 1
+  print()
+
+def quickMove(pzl, token):
+  opptoken = 'o'
+  if token.lower() == 'o': opptoken = "x"
+  posMoves = [*findMoves(pzl, token)]
+  posMoves_cpy = [*posMoves]
+  choice = posMoves[0]
+  #corners we want corners
+  for i in corner_adj:
+    if i in posMoves_cpy:
+      return i
+  for i in corner_adj:
+    for j in corner_adj[i]:
+      if j in posMoves_cpy:
+        posMoves_cpy.remove(j)
+  if posMoves_cpy:
+    posMoves = [*posMoves_cpy]
+  #mobility section
+  # mobility = 1000 #possible moves
+  # for mv in posMoves:
+  #   moves = len(findMoves(makeMoves(pzl, token, mv)[1], opptoken))
+  #   if moves < mobility:
+  #     choice = mv
+  #     mobility = moves
+  return choice
+
+def printpz(solved, setOfPosMoves):
+  while "*" in solved:
+    solved.replace("*", ".")
+  if setOfPosMoves:
+    for i in range(1, SIZE+1):
+      if (i-1) % WIDTH == 0 and i != 0:
+        print()
+      if i-1 in setOfPosMoves:
+        print("*", end="")
+      else:
+        print(solved[i - 1], end="")
+  else:
+    for i in range(1, SIZE+1):
+      if (i-1) % WIDTH == 0 and i != 0:
+        print()
+      print(solved[i-1], end="")
+  print()
+  print()
+  print(f"{solved} {solved.count('x')}/{solved.count('o')}")
+
+def main():
+  # othello.py [board] [tokenToPlay] [move1] [move2] ...
+  first = time.process_time()
+  playOthello3(BOARD, TOKEN, OPPTOKEN)
+  if findMoves(BOARD, TOKEN):
+    choice = quickMove(BOARD, TOKEN)
+    print(f"The preferred move is {choice}")
+  print(f"{(time.process_time() - first):.4g}s")
+  print()
+
+if __name__ == '__main__':
+  main()
+
+# Evelyn Li, pd 7, 2024
