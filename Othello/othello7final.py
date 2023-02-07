@@ -9,7 +9,7 @@ def convertMoves(unformattedMoves, regex):
   formatted = []
   nextMovesList = uncondense(unformattedMoves)
   for i in nextMovesList:
-    if "-" not in i:
+    if "-" not in i and int(i) < 65:
       if (x:=re.search(regex, i)):
         col = ord(i[0].upper()) - 65
         row = int(i[1])-1
@@ -38,6 +38,7 @@ def uncondense(unformattedMoves):
 SIZE = 64
 WIDTH = 8
 HOLES = 11
+VERBOSE = False
 CACHE_NM = {}
 CACHE_AB = {}
 CACHE_MOVES = {}
@@ -45,13 +46,16 @@ CACHE_TURN = {}
 STATS = {"cacheNMHit": 0, "cacheNMSize": 0} #10% cache hit
 dy = [0, 0, 1, -1, -1, 1, -1, 1]
 dx = [1, -1, 0, 0, 1, -1, -1, 1]
-corner_adj = {0: (1, 8, 9), 7:(6, 14, 15), 56:(57, 48, 49), 63:(62, 55, 54)}
+corner_points = {0, 7, 56, 63}
+corner_adj = {1,8,9,6,14,15,57,48,49,62,55,54}
 edges = [(0,1,2,3,4,5,6,7), (7,15,23,31,39,47,55,63),(56,57,58,59,60,61,62,63), (0,8,16,24,32,40,49,56)]
 formatMoves = "^[A-Za-z]\d*$"
 BOARD = '.'*27+'ox......xo'+'.'*27
 TOKEN = 'x'
 LOM = []
 specialToken = False
+if 'v' in args or 'V' in args:
+  VERBOSE = True
 for arg in args:
   if len(arg) == 64:
     BOARD = arg.lower()
@@ -68,7 +72,7 @@ if not specialToken:
 LOM = convertMoves(LOM, formatMoves)
 OPPTOKEN = "o" if TOKEN == 'x' else "x"
 # print("board: ", BOARD)
-# print("token: ", TOKEN)
+# print("token: ", TOKEN, OPPTOKEN)
 # print("List of Possible Moves: ", LOM)
 
 def findMoves(pzl, token):
@@ -154,25 +158,29 @@ def turn3(pzl, token, opptoken, move):
     newPzl = newPzl[:i] + token + newPzl[i+1:]
   return newPzl
 
-def makeMoves3(pzl, token, move):
+def makeMoves3(pzl, token, move, lastTime):
   opptoken = 'o'
   if token.lower() == 'o': opptoken = "x"
-  print()
+  if VERBOSE: print()
   passed = False
-  print()
-  print(f"{token} plays to {move}")
   newPzl = pzl[:move] + token + pzl[move + 1:]
   newPzl = turn3(newPzl, token, opptoken, move)
   som = findMoves(newPzl, opptoken)
-  printpz(newPzl, som, move)
+  if VERBOSE:
+    print()
+    print(f"{token} plays to {move}")
+    printpz(newPzl, som, move)
+  if lastTime and not VERBOSE:
+    print(f"{token} plays to {move}")
+    printpz(newPzl, som, move)
   if som:
-    print(f"Possible moves for {opptoken}: ", *som)
+    if VERBOSE: print(f"Possible moves for {opptoken}: ", *som)
   else:  # MAKE IT WORK FOR PASSES
     #print("No moves possible")
     passed = True
     som = findMoves(newPzl, token)
     if som:
-      print(f"Possible moves for {token}: ", *som)
+      if VERBOSE: print(f"Possible moves for {token}: ", *som)
   return som, newPzl, passed
 
 def playOthello3(pzl, token, opptoken):
@@ -181,18 +189,19 @@ def playOthello3(pzl, token, opptoken):
   som = findMoves(pzl, token)
   newPzl = pzl
   if som:
-    printpz(BOARD, som, -65)
-    print(f"Possible moves for {token}: ", *som)
-    print()
+    if VERBOSE or not LOM:
+      printpz(BOARD, som, -65)
+      print(f"Possible moves for {token}: ", *som)
+      print()
     count = 0
     for ct,i in enumerate(LOM):
       if count % 2 == 0:
-        som, newPzl, passed = makeMoves3(newPzl, token, i)
+        som, newPzl, passed = makeMoves3(newPzl, token, i, (len(LOM)-1)==ct)
         tknToPlay = opptoken
         if passed:
           count+=1
       else:
-        som, newPzl, passed = makeMoves3(newPzl, opptoken, i)
+        som, newPzl, passed = makeMoves3(newPzl, opptoken, i, (len(LOM)-1)==ct)
         tknToPlay = token
         if passed:
           count+=1
@@ -201,27 +210,27 @@ def playOthello3(pzl, token, opptoken):
     #print("No moves possible")
     token, opptoken = opptoken, token
     som = findMoves(pzl, token)
-    printpz(BOARD, som, -65)
+    if VERBOSE: printpz(BOARD, som, -65)
     if som:
-      print(f"Possible moves for {token}: ", *som)
-      print()
+      if VERBOSE:
+        print(f"Possible moves for {token}: ", *som)
+        print()
       count = 0
       for ct, i in enumerate(LOM):
         if count % 2 == 0:
-          som, newPzl, passed = makeMoves3(newPzl, token, i)
-          print(tknToPlay, passed)
+          som, newPzl, passed = makeMoves3(newPzl, token, i, (len(LOM)-1)==ct)
           tknToPlay = opptoken
           if passed:
             count += 1
         else:
-          som, newPzl, passed = makeMoves3(newPzl, opptoken, i)
+          som, newPzl, passed = makeMoves3(newPzl, opptoken, i, (len(LOM)-1)==ct)
           tknToPlay = token
           if passed:
             count += 1
         count += 1
   if som:
     print(f"My preferred move is: {[*som][-1]}")
-  print()
+    print()
   return som, newPzl, tknToPlay
 
 def printpz(solved, setOfPosMoves, move):
@@ -239,60 +248,6 @@ def printpz(solved, setOfPosMoves, move):
   print()
   print()
   print(f"{solved} {solved.count('x')}/{solved.count('o')}")
-
-def safe_edge(pzl, token, posMoves):
-  opptoken = 'o'
-  if token.lower() == 'o': opptoken = "x"
-  wedge = opptoken+"."+opptoken
-  corner = []
-  moves = set()
-  for i in corner_adj:
-    if pzl[i] == token:
-      corner.append(i)
-  edgePieces = []
-  for tup in edges:
-    edgePieces.append("".join(pzl[i] for i in tup))
-  for ind, ed in enumerate(edgePieces):
-    if ed[0] == token:
-      for ct, i in enumerate(ed):
-        if i == ".":
-          moves.add(edges[ind][ct])
-          break;
-    elif ed[7] == token:
-      for ct, i in enumerate(ed[::-1]):
-        if i == ".":
-          moves.add(7-edges[ind][ct])
-          break;
-  for i in {*moves}:
-    if i not in posMoves:
-      moves = moves - {i}
-  return [*moves]
-
-def negamax(pzl, token, topLvl):
-  #returns a list of the best pos score that tkn
-  #can achieve, along with an optimal (reversed) move
-  #sequence that can get tkn there.
-  if (key:=(pzl, token)) in CACHE_NM:
-    return CACHE_NM[key]
-  opptoken = 'o'
-  if token.lower() == 'o': opptoken = "x"
-  posMoves = findMoves(pzl, token)
-  if pzl.count('.') == 0 or (not posMoves and not (oppPosMoves:=findMoves(pzl, opptoken))):
-    return [pzl.count(token) - pzl.count(opptoken)]
-  if not posMoves and oppPosMoves:
-    nm = negamax(pzl, opptoken, False)
-    CACHE_NM[key] = [-nm[0]] + nm[1:] + [-1]
-    return CACHE_NM[key]
-  bestSoFar = [-65]
-  for mv in posMoves:
-    newPzl = makeMoves(pzl, token, mv)
-    nm = negamax(newPzl, opptoken, False)
-    if -nm[0] > bestSoFar[0]:
-      if topLvl:
-        print(f"Min score: {-nm[0]}, move sequence: {nm[1:] + [mv]}")
-      CACHE_NM[key] = [-nm[0]] + nm[1:] + [mv]
-      bestSoFar = CACHE_NM[key]
-  return bestSoFar
 
 def alphabeta(pzl, token, beta, alpha, topLvl):
   opptoken = 'o'
@@ -315,84 +270,73 @@ def alphabeta(pzl, token, beta, alpha, topLvl):
     beta = score + 1
   return best
 
-def mobility(pzl, token, posMoves, choice):
-  mobility = 1000
+def stability(pzl, token, posMoves):
   opptoken = 'o'
   if token.lower() == 'o': opptoken = "x"
-  for mv in posMoves:
-    futureMoves = findMoves(makeMoves(pzl, token, mv), opptoken)
-    corner = sum(1 for i in futureMoves if i in corner_adj)
-    if corner == 0:
-      moves = len(futureMoves)
-      if moves < mobility:
-        choice = mv
-        mobility = moves
-  return [choice, mobility]
+  corners = sum(1 for i in corner_points if i in posMoves)
+  oppPosMoves = findMoves(pzl, opptoken)
+  oppCorners = sum(1 for i in corner_points if i in oppPosMoves)
+  stability = 0
+  if corners + oppCorners > 0:
+    stability = 100*(corners - oppCorners)/(corners+oppCorners)
+  return stability
 
-def quickMove(pzl, token):
-  global HOLES
-  if (pzl == ""):
-    HOLES = token
-  if pzl.count(".") < HOLES:
-    nm = alphabeta(pzl, token, -65, 65, True)
-    return nm[-1]
-  opptoken = 'o'
-  if token.lower() == 'o': opptoken = "x"
-  posMoves = [*findMoves(pzl, token)]
-  posMoves_cpy = [*posMoves]
-  for i in corner_adj:
-    if i in posMoves_cpy:
-      return i
-  for i in corner_adj:
-    if pzl[i] == "." or pzl[i] == opptoken:
-      for j in corner_adj[i]:
-        if j in posMoves_cpy:
-          posMoves_cpy.remove(j)
-  if posMoves_cpy:
-    posMoves = posMoves_cpy
-  ed = safe_edge(pzl, token, posMoves)
-  if ed:
-    return ed[0]
-  #mobility section
-  choice = mobility(pzl, token, posMoves, posMoves[0])[0]
-  return choice
+def scoreCalc(pzl, token, posMoves):
+  score = 0
+  mob = len(posMoves)
+  stab = stability(pzl, token, posMoves)
+  corners = 0
+  if posMoves:
+    move = posMoves[0]
+    corners = 2*mob if move in corner_points else 0
+    for i in corner_points:
+      if move in corner_adj:
+        corners -= 2*mob
+  if (pzl.count(".") >=20):
+    score = 4*mob + corners + stab
+  else:
+    score = mob + corners + 5*stab
+  return score
 
-def midGame(pzl, token, alpha, beta, depth):
+def midGame(pzl, token, beta, alpha, depth):
   opptoken = 'o'
   if token.lower() == 'o': opptoken = "x"
   posMoves = [*findMoves(pzl, token)]
   if depth == 0:
-    return [mobility(pzl, token, posMoves, posMoves[0])[1]]
+    return [scoreCalc(pzl, token, posMoves)]
   if not posMoves:
     if not findMoves(pzl, opptoken):
-      return [mobility(pzl, token, posMoves, posMoves[0])[1]]
-    ab = midGame(pzl, opptoken, -alpha, -beta, depth-1)
-    return [-ab[0]] + ab[1:] + [-1]
+      return [scoreCalc(pzl, token, posMoves)]
+    mg = midGame(pzl, opptoken, -alpha, -beta, depth-1)
+    return [-mg[0]] + mg[1:] + [-1]
   best = [beta-1]
   for mv in posMoves:
-    ab = midGame(makeMoves(pzl, token, mv), opptoken, -alpha, -beta, depth-1)
-    score = -ab[0]
+    mg = midGame(makeMoves(pzl, token, mv), opptoken, -alpha, -beta, depth-1)
+    score = -mg[0]
+    #print(score, beta, alpha)
     if score < beta: continue
     if score > alpha: return [score]
-    best = [score] + ab[1:] + [mv]
+    #print(f"Min score: {score}, move sequence: {mg[1:] + [mv]}")
+    best = [score] + mg[1:] + [mv]
     beta = score + 1
   return best
 
 def main():
   first = time.process_time()
   som, newPzl, tknToPlay = playOthello3(BOARD, TOKEN, OPPTOKEN)
-  print("othello6 (alpha beta pruning) code starting...")
-  print(tknToPlay, findMoves(newPzl, tknToPlay))
-  if (pos:=findMoves(newPzl, tknToPlay)):
-    if newPzl.count(".") >=HOLES:
-      choice = midGame(newPzl, tknToPlay, -65, 65, 2)
-      #choice = quickMove(newPzl, tknToPlay)
-      print(f"Possible moves for {tknToPlay}: {', '.join(str(i) for i in pos)}")
-      print(f"The preferred move is {choice}")
-    else:
+  string = ", ".join(str(i) for i in som)
+  choice = [0]
+  #print("Othello 7 starting...")
+  if som:
+    # choice = quickMove(newPzl, tknToPlay)
+    if newPzl.count(".") >= HOLES:
+      choice = midGame(newPzl, tknToPlay, -99999, 99999, 4)
+    print(f"Possible moves for {tknToPlay}: {string}")
+    print(f"My preferred move is {choice[-1]}")
+    if newPzl.count(".") < HOLES:
       nm = alphabeta(newPzl, tknToPlay, -65, 65, True)
       #print(f"Min score: {nm[0]}, move sequence: {nm[1:]}")
-      return nm[-1]
+      choice = nm
   print(f"Elapsed time: {(time.process_time() - first)}s")
   # print(STATS)
   # print(((STATS['cacheNMHit'] - STATS["cacheNMSize"])/(STATS['cacheNMHit']))*100)

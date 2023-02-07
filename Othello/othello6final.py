@@ -356,10 +356,10 @@ def main():
   first = time.process_time()
   som, newPzl, tknToPlay = playOthello3(BOARD, TOKEN, OPPTOKEN)
   print("othello6 (alpha beta pruning) code starting...")
-  print(tknToPlay, findMoves(newPzl, tknToPlay))
-  if (pos:=findMoves(newPzl, tknToPlay)):
+  print(tknToPlay, findMoves(newPzl, tknToPlay), som)
+  if som:
     choice = quickMove(newPzl, tknToPlay)
-    print(f"Possible moves for {tknToPlay}: {', '.join(str(i) for i in pos)}")
+    print(f"Possible moves for {tknToPlay}: {', '.join(str(i) for i in som)}")
     print(f"The preferred move is {choice}")
     if newPzl.count(".") < HOLES:
       nm = alphabeta(newPzl, tknToPlay, -65, 65, True)

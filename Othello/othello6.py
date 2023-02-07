@@ -37,10 +37,11 @@ def uncondense(unformattedMoves):
 
 SIZE = 64
 WIDTH = 8
-HOLES = 13
+HOLES = 11
 CACHE_NM = {}
 CACHE_AB = {}
 CACHE_MOVES = {}
+CACHE_TURN = {}
 STATS = {"cacheNMHit": 0, "cacheNMSize": 0} #10% cache hit
 dy = [0, 0, 1, -1, -1, 1, -1, 1]
 dx = [1, -1, 0, 0, 1, -1, -1, 1]
@@ -50,15 +51,20 @@ formatMoves = "^[A-Za-z]\d*$"
 BOARD = '.'*27+'ox......xo'+'.'*27
 TOKEN = 'x'
 LOM = []
+specialToken = False
 for arg in args:
   if len(arg) == 64:
     BOARD = arg.lower()
   if re.search("^HL", arg):
     HOLES = int(arg[2:])
-  if (64-BOARD.count('.')) % 2 == 0: TOKEN = 'x'
-  else: TOKEN = 'o'
+  if re.search("^[XxOo]$", arg):
+    specialToken = True
+    TOKEN = arg
   if re.search("^(\d|_)+$", arg):
     LOM.append(arg)
+if not specialToken:
+  if (64-BOARD.count('.')) % 2 == 0: TOKEN = 'x'
+  else: TOKEN = 'o'
 LOM = convertMoves(LOM, formatMoves)
 OPPTOKEN = "o" if TOKEN == 'x' else "x"
 # print("board: ", BOARD)
@@ -98,6 +104,8 @@ def makeMoves(pzl, token, move):
 
 def turn(pzl, token, opptoken, move):
   #turn all the opptokens in between affected by the move into the token
+  if (tup:=(pzl, token, move)) in CACHE_TURN:
+    return CACHE_TURN[tup]
   converted = set()
   row = move // 8
   col = move % 8
@@ -118,7 +126,9 @@ def turn(pzl, token, opptoken, move):
           converted.add(itt)
   for i in converted:
     newPzl[i] = token
-  return ''.join(newPzl)
+  realPzl = ''.join(newPzl)
+  CACHE_TURN[tup] = realPzl
+  return realPzl
 
 def turn3(pzl, token, opptoken, move):
   #turn all the opptokens in between affected by the move into the token
@@ -199,6 +209,7 @@ def playOthello3(pzl, token, opptoken):
       for ct, i in enumerate(LOM):
         if count % 2 == 0:
           som, newPzl, passed = makeMoves3(newPzl, token, i)
+          print(tknToPlay, passed)
           tknToPlay = opptoken
           if passed:
             count += 1
@@ -283,21 +294,23 @@ def negamax(pzl, token, topLvl):
       bestSoFar = CACHE_NM[key]
   return bestSoFar
 
-def alphabeta(pzl, token, beta, alpha):
+def alphabeta(pzl, token, beta, alpha, topLvl):
   opptoken = 'o'
   if token.lower() == 'o': opptoken = "x"
   posMoves = findMoves(pzl, token)
   if not posMoves:
     if not findMoves(pzl, opptoken):
       return [pzl.count(token) - pzl.count(opptoken)]
-    ab = alphabeta(pzl, opptoken, -alpha, -beta)
+    ab = alphabeta(pzl, opptoken, -alpha, -beta, False)
     return [-ab[0]] + ab[1:] + [-1]
   best = [beta-1]
   for mv in posMoves:
-    ab = alphabeta(makeMoves(pzl, token, mv), opptoken, -alpha, -beta)
+    ab = alphabeta(makeMoves(pzl, token, mv), opptoken, -alpha, -beta, False)
     score = -ab[0]
     if score < beta: continue
     if score > alpha: return [score]
+    if topLvl:
+      print(f"Min score: {score}, move sequence: {ab[1:] + [mv]}")
     best = [score] + ab[1:] + [mv]
     beta = score + 1
   return best
@@ -307,7 +320,7 @@ def quickMove(pzl, token):
   if (pzl == ""):
     HOLES = token
   if pzl.count(".") < HOLES:
-    nm = alphabeta(pzl, token, -65, 65)
+    nm = alphabeta(pzl, token, -65, 65, True)
     return nm[-1]
   opptoken = 'o'
   if token.lower() == 'o': opptoken = "x"
@@ -343,16 +356,14 @@ def main():
   first = time.process_time()
   som, newPzl, tknToPlay = playOthello3(BOARD, TOKEN, OPPTOKEN)
   print("othello6 (alpha beta pruning) code starting...")
-  # opptoken = 'o'
-  # if tknToPlay.lower() == 'o': opptoken = "x"
-  # tknToPlay = opptoken
+  print(tknToPlay, findMoves(newPzl, tknToPlay))
   if (pos:=findMoves(newPzl, tknToPlay)):
     choice = quickMove(newPzl, tknToPlay)
     print(f"Possible moves for {tknToPlay}: {', '.join(str(i) for i in pos)}")
     print(f"The preferred move is {choice}")
     if newPzl.count(".") < HOLES:
-      nm = alphabeta(newPzl, tknToPlay, -65, 65)
-      print(f"Min score: {nm[0]}, move sequence: {nm[1:]}")
+      nm = alphabeta(newPzl, tknToPlay, -65, 65, True)
+      #print(f"Min score: {nm[0]}, move sequence: {nm[1:]}")
       return nm[-1]
   print(f"Elapsed time: {(time.process_time() - first)}s")
   # print(STATS)
@@ -361,7 +372,5 @@ def main():
 
 if __name__ == '__main__':
   main()
-
-#o3 works!
 
 # Evelyn Li, pd 7, 2024
