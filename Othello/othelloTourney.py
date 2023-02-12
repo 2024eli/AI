@@ -331,9 +331,17 @@ def safe_edge(pzl, token, posMoves):
     if i not in posMoves:
       moves = moves - {i}
   return [*moves]
-def quickMove(pzl, token):
+
+def quickMove(pzl, token, depth):
   opptoken = 'o'
   if token.lower() == 'o': opptoken = "x"
+  if pzl.count(".") >= HOLES:
+    mg = midGame(pzl, token, -99999, 99999, 4)
+    return mg[-1]
+  if pzl.count(".") < HOLES:
+    nm = alphabeta(pzl, token, -65, 65, True)
+    # print(f"Min score: {nm[0]}, move sequence: {nm[1:]}")
+    return nm[-1]
   posMoves = [*findMoves(pzl, token)]
   posMoves_cpy = [*posMoves]
   for i in corner_points:
@@ -383,28 +391,19 @@ def midGame(pzl, token, beta, alpha, depth):
     beta = score + 1
   return best
 
-def main():
-  first = time.process_time()
-  som, newPzl, tknToPlay = playOthello3(BOARD, TOKEN, OPPTOKEN)
-  string = ", ".join(str(i) for i in som)
-  choice = [0]
-  #print("Othello 7 starting...")
-  if som:
-    choice = quickMove(newPzl, tknToPlay)
-    print(f"My preferred move is {choice}")
-    if newPzl.count(".") >= HOLES:
-      choice = midGame(newPzl, tknToPlay, -99999, 99999, 4)
-    if newPzl.count(".") < HOLES:
-      nm = alphabeta(newPzl, tknToPlay, -65, 65, True)
-      #print(f"Min score: {nm[0]}, move sequence: {nm[1:]}")
-      choice = nm
-    print(f"Possible moves for {tknToPlay}: {string}")
-    print(f"My preferred move is {choice[-1]}")
-
   # print(f"Elapsed time: {(time.process_time() - first)}s")
   # print(STATS)
   # print(((STATS['cacheNMHit'] - STATS["cacheNMSize"])/(STATS['cacheNMHit']))*100)
   print()
+
+class Strategy():
+  logging = True  # Optional
+  def best_strategy(self, board, player, best_move, still_running):
+    depth = 1
+    for count in range(board.count(".")):  # No need to look more spaces into the future than exist at all
+      best_move.value = quickMove(board, player, depth)
+      depth += 1
+
 
 if __name__ == '__main__':
   main()

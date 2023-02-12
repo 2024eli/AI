@@ -32,6 +32,16 @@ myRegexLst = [
   r"/(?!.*10011)^[01]*$/",  # 57
   r"/\w*([aeiou])(?!\1)[aeiou]\w*/i",  # 58 -2
   r"/^((?!1[01]1)[10])*$/",  # 59 ----
+  r"/(?!.*010)^[01]*$/",  # 60 16 14
+  r"/(?!.*(101|010))^[01]*$/",  # 61 22 20
+  r"/^(1|0)([01]*\1)*$/",  # 62 17 14
+  r"/\b(?!\w*(\w)\w*\1\b)\w+/i",  # 63 23 21
+  r"/\b(?=(\w)*((\w*\1){3}|\w*\1(\w)*\4)|(\w)*(\w)*\w*(\6\w*\5|\5\w*\6))\w*/i",  # 64 70 43
+  r"/\b(?=(\w)*(\w*\1){2,})(?!\w*(?!\1)(\w)\w*\3)\w*/i",  # 65 47 44
+  r"/\b(?!\w*([aeiou])\w*\1)(?=\w*a)(?=\w*e)(?=\w*o)(?=\w*i)(?=\w*u)\w*/i",  # 66 66 39
+  r"/^(?=(0*(10*1)?0*)*$)([10]{2})*[10]$/",  # 67 36 22
+  r"/^(0|(1(01*0)*10*)+)$/",  # 68 20 19
+  r"/^1((10*1)*(01*0)?)*(01*)?$/",  # 69 26 19
 ]
 
 '''
@@ -61,6 +71,7 @@ Q46: Match on all binary strings which DON'T contain the substring 110.
 Q47: Match on all non-empty strings over the alphabet {a, b, c} that contain at most one a.
 Q48: Match on all non-empty strings over the alphabet {a, b, c} that contain an even number of a's.
 Q49: Match on all positive, even, base 3 integer strings.
+
 Q50: Match all words where some letter appears twice in the same word.
 Q51: Match all words where some letter appears four times in the same word.
 Q52: Match all non-empty binary strings with the same number of 01 substrings as 10 substrings.
@@ -71,6 +82,17 @@ Q56: Match all words with no repeated characters.
 Q57: Match all binary strings not containing the forbidden substring 10011.
 Q58: Match all words having two different adjacent vowels.
 Q59: Match all binary strings containing neither 101 nor 111 as substrings.
+
+Q60: Match all binary strings that do not contain the forbidden substring 010.  (14)
+Q61: Match all binary strings containing neither 101 nor 010 as substrings.  (20)
+Q62: Match on all non-empty binary strings with the same number of 01 substrings as 10 substrings.  (14)
+Q63: Match all words whose final letter is not to be found elsewhere in the word.  (21)  
+Q64: Match all words that have at least two pairs of doubled letters (two pairs of distinct letters or four of the same letter are both OK).  (43)
+Q65: Match all words that have no duplicate letter, except for one, which occurs at least 3 times.  (42)
+Q66: Match all words where each of the five vowels occurs exactly once.  (39)
+Q67: Match all binary strings that have an odd number of 0s and an even number of 1s.  (22)
+Q68: Match all binary integer strings that are divisible by 3.  (19)
+Q69: Match all binary integer strings that are not divisible by 3.  (19)
 '''
 
 if idx < len(myRegexLst):
