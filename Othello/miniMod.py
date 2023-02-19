@@ -41,7 +41,7 @@ def playGame(quickMove, token, show=False):
       mv = random.choice([*moves])  # Random's turn
     else:  # quickMove's turn
       try:
-        mv = quickMove(brd, tknToPlay)
+        mv = quickMove(brd, tknToPlay, 0)
         if mv not in moves:
           dt = ' '.join(aSCORES)  # tranche summary
           print(f"Partial tranche summary: {dt}")
@@ -101,7 +101,7 @@ else:
   aSCORES = []
   for gameNum in range(1, trnyCt + 1):
     gameStart = time.process_time()
-    pg = playGame(quickMove, tkn)  # returns [myTknCt, enemyTknCt, gameXscript]
+    pg = playGame(quickMove, tkn, 0)  # returns [myTknCt, enemyTknCt, gameXscript]
     mine, tkns = mine + pg[0], tkns + pg[0] + pg[1]
     timeUsed = time.process_time() - gameStart
     res += [pg]  # Append played game to results
