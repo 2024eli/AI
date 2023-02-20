@@ -40,18 +40,18 @@ def uncondense(unformattedMoves):
 #rotation/reflection
 def rotAndRef(b): #b is board = pzl, w is width = 8
   w = 8
-  if b in openingbook: return True, openingbook[b]
+  if b in openingbook: return openingbook[b]
   L = [b, "".join(b[rs:rs + w][::-1] for rs in range(0, len(b), w))]
-  if L[1] in openingbook: return True, translateMoves(b, L[1], "VF")
+  if L[1] in openingbook: return translateMoves(b, L[1], "VF")
   L += ["".join(d[cs::w][::-1] for cs in range(w)) for d in L]
-  if L[2] in openingbook: return True, translateMoves(b, L[2], '1|90CW')
-  if L[3] in openingbook: return True, translateMoves(b, L[3], "VF|90CW")
+  if L[2] in openingbook: return translateMoves(b, L[2], '1|90CW')
+  if L[3] in openingbook: return translateMoves(b, L[3], "VF|90CW")
   L += ["".join(d[::-1]) for d in L]
-  if L[4] in openingbook: return True, translateMoves(b, L[4], "1|180")
-  if L[5] in openingbook: return True, translateMoves(b, L[5], "VF|180")
-  if L[6] in openingbook: return True, translateMoves(b, L[6], "1|90CW|180")
-  if L[7] in openingbook: return True, translateMoves(b, L[7], "VF|90CW|180")
-  return False, 0
+  if L[4] in openingbook: return translateMoves(b, L[4], "1|180")
+  if L[5] in openingbook: return translateMoves(b, L[5], "VF|180")
+  if L[6] in openingbook: return translateMoves(b, L[6], "1|90CW|180")
+  if L[7] in openingbook: return translateMoves(b, L[7], "VF|90CW|180")
+  return []
 
 #rotations and reflect the moves back to correct
 def translateMoves(og, book, tran):
@@ -65,7 +65,7 @@ def translateMoves(og, book, tran):
 
 SIZE = 64
 WIDTH = 8
-HOLES = 12
+HOLES = 10
 VERBOSE = False
 CACHE_MOVES = {}
 CACHE_TURN = {}
@@ -73,8 +73,9 @@ CACHE_AB = {}
 CACHE_MG = {}
 dy = [0, 0, 1, -1, -1, 1, -1, 1]
 dx = [1, -1, 0, 0, 1, -1, -1, 1]
-corner_points = {0, 7, 56, 63}
+corner_points = {0, 7, 56,63}
 corner_adj = {1,8,9,6,14,15,57,48,49,62,55,54}
+square = {9:0, 14:7, 49:56, 54:63, 1:0, 8:0, 6:7, 15:7, 62:63, 48:56, 55:56, 57:63}
 xSq = {9, 14, 49, 54}
 cSq = {1, 8, 6, 15, 62, 48, 55, 57}
 edges = [(0,1,2,3,4,5,6,7), (7,15,23,31,39,47,55,63),(56,57,58,59,60,61,62,63), (0,8,16,24,32,40,49,56)]
@@ -88,9 +89,8 @@ openingbook = {'...........................ox......xo...........................
                '....................o.....xxo......oxx....o.....................': [34],
                '..................ox......oxx.....ooo...........................': [33],
                '..................ox.....xxxx.....ooo...........................': [21],
-               'xxxxxxxxxxoxxoxxxooxoxoxxxoxxoxxxxoxoxxxxxooxxxx..oooo.x........': [49],
-               'oxxxxxxxooooxooxoooxxxoxoooxxxoxoooxoooxooxxoooxooooo...x.oo....': [61],
-               'xxxxxxxxxxooxoooxoxxxxooxooxxoxoxooxooo.xoxxoo..ooooo...x.oo....': [47]
+               '..oxxxxo..xxxxo.xxxxxooooxxxoxoooxxoxooooooxoooo.oooxxo.o..o.x.o': [9],
+               'x.xxxo.x.xoxxox.xoxoxxoxxxoxxxoxxoxxxxoxoooxoxox.oooxo....xxxxo.': [56]
                }
 # transformations = {'VF': {42: 45, 45: 42, 3: 4, 4: 3, 35: 36, 36: 35, 41: 46, 46: 41, 9: 14, 14: 9, 40: 47, 47: 40, 34: 37, 37: 34, 1: 6, 6: 1, 2: 5, 5: 2, 8: 15, 15: 8, 27: 28, 28: 27, 32: 39, 39: 32, 33: 38, 38: 33, 58: 61, 61: 58, 59: 60, 60: 59, 26: 29, 29: 26, 51: 52, 52: 51, 0: 7, 7: 0, 57: 62, 62: 57, 19: 20, 20: 19, 56: 63, 63: 56, 18: 21, 21: 18, 24: 31, 31: 24, 25: 30, 30: 25, 43: 44, 44: 43, 50: 53, 53: 50, 49: 54, 54: 49, 10: 13, 13: 10, 11: 12, 12: 11, 17: 22, 22: 17, 48: 55, 55: 48, 16: 23, 23: 16},
 #                    '1|90CW': {55: 6, 57: 55, 30: 11, 52: 30, 29: 19, 44: 29, 9: 14, 14: 54, 3: 31, 31: 60, 27: 28, 28: 36, 4: 39, 39: 59, 22: 10, 53: 22, 36: 28, 1: 15, 15: 62, 2: 23, 23: 61, 10: 22, 61: 23, 47: 5, 58: 47, 46: 13, 50: 46, 20: 37, 37: 43, 0: 7, 7: 63, 21: 18, 45: 21, 62: 15, 59: 39, 19: 29, 54: 14, 18: 21, 13: 46, 38: 12, 51: 38, 12: 38, 6: 55, 43: 37, 11: 30, 63: 7, 60: 31, 5: 47},
@@ -252,30 +252,43 @@ def scoreCalc(pzl, token, posMoves):
   opptoken = 'o'
   if token.lower() == 'o': opptoken = "x"
   score = 0
-  oppMoveLen = len(findMoves(pzl, opptoken))
+  oppMove = findMoves(pzl, opptoken)
+  oppMoveLen = len(oppMove)
   mobility = oppMoveLen
   corners = 0
-  x = 0
-  c = 0
+  corners = corn(pzl, token) - corn(pzl, opptoken)
+  score = score+10*corners - 50*mobility
+  print(corners, mobility, score)
+  return score
+
+def corn(pzl, token):
+  corner = []
+  score = 0
   for i in corner_points:
-    if pzl[i] == token: corners += 1
-  for i in xSq:
-    if pzl[i] == token: x += 1
-  for i in cSq:
-    if pzl[i] == token: c += 1
-  score = 9500*corners - 1500*x - 800*c - 30*mobility
+    if pzl[i] == token: #corner lets go!
+      score += 100
+  for i in square:
+    if pzl[i] == token: # i have a square...
+      if square[i] in corner: #yay i have this AND square!
+        score += 100
+      else:
+        if i in cSq: # oh no i just have an x sq
+          score -= 15
+        elif i in xSq:
+          score -= 90
   return score
 
 def quickMove(pzl, token, depth):
   # rot = rotAndRef(pzl)
   if pzl in openingbook:
     return openingbook[pzl][-1]
-
   opptoken = 'o'
   if token.lower() == 'o': opptoken = "x"
   if pzl.count(".") < HOLES:
     ab = alphabeta(pzl, token, -65, 65, True)
     return ab[-1]
+  # rot = rotAndRef(pzl)
+  # if rot: return rot[-1]
   if pzl.count(".") >= HOLES:
     mg = midGame(pzl, token, -99999, 99999, 3)
     return mg[-1]

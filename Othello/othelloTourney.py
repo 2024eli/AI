@@ -5,6 +5,7 @@ import re;
 import random
 import time;
 
+#for changing LOM to parseable by code
 def convertMoves(unformattedMoves, regex):
   formatted = []
   nextMovesList = uncondense(unformattedMoves)
@@ -18,6 +19,7 @@ def convertMoves(unformattedMoves, regex):
         formatted.append(int(i))
   return formatted
 
+#also for changing LOM to parseable by code
 def uncondense(unformattedMoves):
   formatted = []
   for i in unformattedMoves:
@@ -35,6 +37,7 @@ def uncondense(unformattedMoves):
       formatted.append(i)
   return formatted
 
+#rotation/reflection
 def rotAndRef(b): #b is board = pzl, w is width = 8
   w = 8
   if b in openingbook: return True, openingbook[b]
@@ -50,6 +53,7 @@ def rotAndRef(b): #b is board = pzl, w is width = 8
   if L[7] in openingbook: return True, translateMoves(b, L[7], "VF|90CW|180")
   return False, 0
 
+#rotations and reflect the moves back to correct
 def translateMoves(og, book, tran):
   print('translating moves')
   moves = openingbook[book]
@@ -83,7 +87,10 @@ openingbook = {'...........................ox......xo...........................
                '..................ox......xxx......xo...........................': [34],
                '....................o.....xxo......oxx....o.....................': [34],
                '..................ox......oxx.....ooo...........................': [33],
-               '..................ox.....xxxx.....ooo...........................': [21]
+               '..................ox.....xxxx.....ooo...........................': [21],
+               'xxxxxxxxxxoxxoxxxooxoxoxxxoxxoxxxxoxoxxxxxooxxxx..oooo.x........': [49],
+               'oxxxxxxxooooxooxoooxxxoxoooxxxoxoooxoooxooxxoooxooooo...x.oo....': [61],
+               'xxxxxxxxxxooxoooxoxxxxooxooxxoxoxooxooo.xoxxoo..ooooo...x.oo....': [47]
                }
 # transformations = {'VF': {42: 45, 45: 42, 3: 4, 4: 3, 35: 36, 36: 35, 41: 46, 46: 41, 9: 14, 14: 9, 40: 47, 47: 40, 34: 37, 37: 34, 1: 6, 6: 1, 2: 5, 5: 2, 8: 15, 15: 8, 27: 28, 28: 27, 32: 39, 39: 32, 33: 38, 38: 33, 58: 61, 61: 58, 59: 60, 60: 59, 26: 29, 29: 26, 51: 52, 52: 51, 0: 7, 7: 0, 57: 62, 62: 57, 19: 20, 20: 19, 56: 63, 63: 56, 18: 21, 21: 18, 24: 31, 31: 24, 25: 30, 30: 25, 43: 44, 44: 43, 50: 53, 53: 50, 49: 54, 54: 49, 10: 13, 13: 10, 11: 12, 12: 11, 17: 22, 22: 17, 48: 55, 55: 48, 16: 23, 23: 16},
 #                    '1|90CW': {55: 6, 57: 55, 30: 11, 52: 30, 29: 19, 44: 29, 9: 14, 14: 54, 3: 31, 31: 60, 27: 28, 28: 36, 4: 39, 39: 59, 22: 10, 53: 22, 36: 28, 1: 15, 15: 62, 2: 23, 23: 61, 10: 22, 61: 23, 47: 5, 58: 47, 46: 13, 50: 46, 20: 37, 37: 43, 0: 7, 7: 63, 21: 18, 45: 21, 62: 15, 59: 39, 19: 29, 54: 14, 18: 21, 13: 46, 38: 12, 51: 38, 12: 38, 6: 55, 43: 37, 11: 30, 63: 7, 60: 31, 5: 47},
@@ -241,65 +248,38 @@ def alphabeta(pzl, token, beta, alpha, topLvl):
     # CACHE_AB[(pzl, token, beta, alpha)] = best
   return best
 
-def scoreCalc1(pzl, token, posMoves):
-  opptoken = 'o'
-  if token.lower() == 'o': opptoken = "x"
-  score = 0
-  stage = 64-pzl.count(".") #64 - holes
-  #mobility
-  oppMoveLen = len(findMoves(pzl, opptoken))
-  mobility = len(findMoves(pzl, token)) - oppMoveLen
-  #stability
-  corners = 0
-  x = 0
-  c = 0
-  for i in corner_points:
-    if pzl[i] == token: corners+=1
-  for i in xSq:
-    if pzl[i] == token: x+= 1
-  for i in cSq:
-    if pzl[i] == token: c+=1
-  # print("stable (corner, x, c)",corners, x, c)
-  #weightings
-  if stage >45:
-    score += 900*corners
-    score += 400*mobility
-    score += -70*x
-    score += -30*c
-  elif stage > 25:
-    score += (64-stage)*100*corners
-    score += 300*mobility
-    score += -1500*x
-    score += -500*c
-  else:
-    score += 3500*corners
-    score += 50*mobility
-    score += -2000*x
-    score += -900*c
-  return score
-
 def scoreCalc(pzl, token, posMoves):
   opptoken = 'o'
   if token.lower() == 'o': opptoken = "x"
   score = 0
-  oppMoveLen = len(findMoves(pzl, opptoken))
-  score = 3 * (-oppMoveLen)
-  cornerCount = 0
+  oppMove = findMoves(pzl, opptoken)
+  oppMoveLen = len(oppMove)
+  mobility = oppMoveLen
+  corners = 0
+  x = 0
+  c = 0
   for i in corner_points:
-    if pzl[i] == token: cornerCount+=1
-    elif pzl[i] == opptoken: cornerCount-=1
-  score += 100*cornerCount
+    if pzl[i] == token: corners += 1
+    elif pzl[i] == opptoken: corners -= 1
+  for i in xSq:
+    if pzl[i] == token: x += 1
+    elif pzl[i] == opptoken: x-=1
+  for i in cSq:
+    if pzl[i] == token: c += 1
+    elif pzl[i] == opptoken: c-=1
+  score = 9000*corners - 1500*x - 800*c - 30*mobility
   return score
 
 def quickMove(pzl, token, depth):
-  opptoken = 'o'
-  if token.lower() == 'o': opptoken = "x"
-  if pzl.count(".") < HOLES:
-    nm = alphabeta(pzl, token, -65, 65, True)
-    return nm[-1]
   # rot = rotAndRef(pzl)
   if pzl in openingbook:
     return openingbook[pzl][-1]
+
+  opptoken = 'o'
+  if token.lower() == 'o': opptoken = "x"
+  if pzl.count(".") < HOLES:
+    ab = alphabeta(pzl, token, -65, 65, True)
+    return ab[-1]
   if pzl.count(".") >= HOLES:
     mg = midGame(pzl, token, -99999, 99999, 3)
     return mg[-1]
