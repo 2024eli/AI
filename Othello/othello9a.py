@@ -1,6 +1,7 @@
 import sys; args = sys.argv[1:]
 import math
 #Evelyn Li, Samarth Bhargav
+args = ['P----CI----OR----AA----TC----EY----D']
 b = args[0]
 w = int(args[1]) if len(args)>1 else (min(i for i in range(math.ceil(len(b)**(1/2)), len(b)) if len(b)%i == 0))
 
