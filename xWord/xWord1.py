@@ -7,42 +7,6 @@ import time
 if not args[0].upper().endswith('.TXT'):
   args = [0] + args
 
-global HEIGHT, WIDTH, SIZE, BLOCKING, NONBLOCKING, DIR, POSITION, PZL
-HEIGHT = int(args[1][0:args[1].upper().find('X')])
-WIDTH = int(args[1][args[1].upper().find('X')+1:])
-SIZE = HEIGHT*WIDTH
-BLOCKING = int(args[2])
-NONBLOCKING = SIZE-BLOCKING
-DIR = ""
-POSITION = {}
-for arg in args[3:]:
-  arg = arg.upper()
-  # if arg.endswith(".TXT"):
-  #   continue
-  DIR = arg[0].upper()
-  endOfDimension = re.search(r'[VH]\d+X\d+', arg).end()
-  POSITION[(DIR, int(arg[1:arg.find('X')]), int(arg[arg.find('X')+1:endOfDimension]))] = arg[endOfDimension:] if arg[endOfDimension:] else '#'
-PZL = ['.'*WIDTH for i in range(HEIGHT)]
-for coord in POSITION:
-  direction = coord[0]
-  row = coord[1]
-  col = coord[2]
-  content = POSITION[coord]
-  if direction == 'V':
-    for i in content:
-      if i == '#':
-        BLOCKING -= 2
-      else: NONBLOCKING -= 1
-      if col+1 != WIDTH:
-        PZL[row] = PZL[row][0:col] + i + PZL[row][col+1:]
-      else: PZL[row] = PZL[row][0:col] + i
-      row += 1
-  else: #DIR = 'H
-    #okay, idk what about if the horizontal goes over to the next row, will that happen.
-    BLOCKING -= (c:=content.count('#'))*2
-    NONBLOCKING = NONBLOCKING - len(content)+c
-    PZL[row] = PZL[row][0:col] + content + PZL[row][col+len(content):]
-
 def printpz(solved):
   for i in solved:
     for j in i:
@@ -59,10 +23,10 @@ def symmetry(pzl):
     flip.append(pzlFlip[i][::-1])
   for i, f in enumerate(flip):
     for j, ch in enumerate(f):
-      if ch == '#' and pzl[i][j] == '.':
-        pzl = add(pzl, j, i, '#')
+      if ch == '#' and not 65 <= ord(pzl[i][j]) <= 90:
+        add(pzl, j, i, '#')
       if 65 <= ord(ch) <= 90 and pzl[i][j] == '.':
-        pzl = add(pzl, j, i, '-')
+        add(pzl, j, i, '-')
   return pzl
 
 def add(pzl, x, y, ch):
@@ -114,8 +78,9 @@ def update(pzl, possible, x, y):
   return possible
 
 #for every spot, look and see if it can be in a 3h and a 3v
-def isInvalid(pzl):
+def generate(pzl, blocks):
   possible = {(x, y) for y in range(HEIGHT) for x in range(WIDTH) if pzl[y][x] == "."}
+  blocking = 0
   while possible:
     row, col = (p:=possible.pop())[1], p[0] #(y, x)
     if pzl[row][col] == '#': continue
@@ -126,42 +91,219 @@ def isInvalid(pzl):
     # print(row, col, l, r, u, d)
     if (v:=u+d) < 2:
       for i in range(u+1):
-        pzl = add(pzl, col, row-i, '#')
-        possible = update(pzl, possible, col, row-i)
+        if pzl[row-i][col] != '#':
+          add(pzl, col, row-i, '#')
+          blocking -= 1
       for i in range(d+1):
-        pzl = add(pzl, col, row+i, '#')
-        possible = update(pzl, possible, col, row+i)
-      printpz(pzl)
+        if pzl[row+i][col] != '#':
+          add(pzl, col, row+i, '#')
+          blocking -= 1
     if (h:=l+r) < 2:
       for i in range(l + 1):
-        pzl = add(pzl, col-i, row, '#')
-        possible = update(pzl, possible, col-i, row)
+        if pzl[row][col-i] != '#':
+          add(pzl, col-i, row, '#')
+          blocking -= 1
       for i in range(r + 1):
-        pzl = add(pzl, col+i, row, '#')
-        possible = update(pzl, possible, col+i, row)
+        if pzl[row][col+i] != '#':
+          add(pzl, col+i, row, '#')
+          blocking -= 1
     pzl = symmetry(pzl)
   return pzl
 
-#generates valid xWord boards
-'''go through (. idk, - letters, # has to be blocking where 3h 3v doesnt work) 
-and see if it can be a horitzontal and vertical word
-how to find more blocking: 
-- '''
-def bruteForce(pzl, blocking):
-  size = SIZE
-  # for row in pzl:
-  #   for ch in row:
+def check1(pzl, ch):
+  for i in range(len(pzl)):
+    for j in range(len(pzl[i])):
+      if (p:=pzl[i][j]) == '.':
+        return (j, i)
+  return True
+
+def check2(pzl):
+  symCount = []
+  for i in pzl:
+    for j in i:
+      if j not in symCount and j != '#': symCount.append(j)
+      if len(symCount) > 2: return False
+  return True
+
+def translate(hashes, pzl):
+  for i in range(HEIGHT):
+    for j in range(WIDTH):
+      if hashes[i][j] == '#' and pzl[i][j] != '#':
+        add(pzl, j, i, '#')
   return pzl
 
+def contiguousHelper(pzl, c, r, ch, symbolsUsed):
+  if 0 <= r < HEIGHT and 0 <= c < WIDTH and ((p:=pzl[r][c]) in ('-','.') or p in symbolsUsed or p.isalpha()):
+    add(pzl, c, r, ch) #PATH
+    contiguousHelper(pzl, c, r+1, ch, symbolsUsed)
+    contiguousHelper(pzl, c, r-1, ch, symbolsUsed)
+    contiguousHelper(pzl, c+1, r, ch, symbolsUsed)
+    contiguousHelper(pzl, c-1, r, ch, symbolsUsed)
+  # return pzl
+
+def contiguous(pzl, blocking, c, r):
+  xW = [i for i in pzl]
+  block = 0
+  innerSet = set()
+  contiguousHelper(xW, c, r, '=', innerSet)
+  isIt = check1(xW, '=')
+  innerSet.add('=')
+  i = 0
+  while isIt != True:
+    symbol = SYMBOLSET[i]
+    contiguousHelper(xW, isIt[0], isIt[1], symbol, innerSet)
+    innerSet.add(symbol)
+    isIt = check1(xW, symbol)
+    i+=1
+  xWord = [i for i in xW]
+  while innerSet:
+    symbol = innerSet.pop()
+    for i in range(HEIGHT):
+      if block + blocking < 0: break
+      if symbol in (s:=xWord[i]):
+        for ch in range(WIDTH):
+          if xWord[i][ch] == symbol:
+            add(xWord, ch, i, '#')
+            block -= 1
+          if block + blocking < 0: break
+    xWord = symmetry(xWord)
+    if blocking + 2*block >= 0:
+      xW = [i for i in xWord]
+    else:
+      xWord = [i for i in xW]
+    block = 0
+  pzl = translate(xW, pzl) #retain all the hashes from xW onto pzl
+  return pzl
+def threeHV(pzl):
+  possible = {(x, y) for y in range(HEIGHT) for x in range(WIDTH) if pzl[y][x] == "."}
+  blocking = 0
+  while possible:
+    row, col = (p:=possible.pop())[1], p[0] #(y, x)
+    if pzl[row][col] == '#': continue
+    l = left(pzl, col, row)
+    r = right(pzl, col, row)
+    u = up(pzl, col, row)
+    d = down(pzl, col, row)
+    # print(row, col, l, r, u, d)
+    if (v:=u+d) < 2:
+      return False
+    if (h:=l+r) < 2:
+      return False
+    pzl = symmetry(pzl)
+  return True
+
+def contig(pzl, c, r):
+  xW = [i for i in pzl]
+  innerSet = set()
+  contiguousHelper(xW, c, r, '=', innerSet)
+  isIt = check1(xW, '=')
+  innerSet.add('=')
+  i = 0
+  while isIt != True:
+    symbol = SYMBOLSET[i]
+    contiguousHelper(xW, isIt[0], isIt[1], symbol, innerSet)
+    innerSet.add(symbol)
+    isIt = check1(xW, symbol)
+    i+=1
+  if len(innerSet)>1: return False
+  return True
+def isInvalid(pzl, blocking):
+  newPzl = [i for i in pzl]
+  if not threeHV(pzl):
+    return True
+  row, col = 0, 0
+  for r in range(HEIGHT):
+    for c in range(WIDTH):
+      if (ch := newPzl[r][c]) in ('-', '.') or ch.isalpha():
+        row, col = r, c
+        break
+  if not contig(newPzl, col, row):
+    return True
+  return False
+
+#generates valid xWord boards, go through and check if valid
+def bruteForce(pzl, blocking):
+  possible = {(x, y) for y in range(HEIGHT) for x in range(WIDTH) if pzl[y][x] == "."}
+  blocks = BLOCKINGARG-''.join(pzl).count('#')
+  newPzl = [i for i in pzl]
+  if isInvalid(newPzl, blocking): return False
+  for p in possible:
+    col, row = p[0],p[1]
+    add(newPzl, col, row, '#')
+    if newPzl:
+      bF = bruteForce(newPzl, blocks)
+      if bF:
+        return bF
+  return False
+
 def main():
-  xW = symmetry(PZL)
-  printpz(xW)
-  xW = isInvalid(PZL) #get all the for certain ones
-  xW = bruteForce(xW, BLOCKING)
-  #take this out for final:
-  for i in range(len(xW)):
-    xW[i] = xW[i].replace('.','-')
-  printpz(xW)
+  #globals
+  global HEIGHT, WIDTH, SIZE, BLOCKING, BLOCKINGARG, NONBLOCKING, DIR, POSITION, PZL, SYMBOLSET
+  SYMBOLSET = '~`!@$%^&*()_+;:<>?,'
+  HEIGHT = int(args[1][0:args[1].upper().find('X')])
+  WIDTH = int(args[1][args[1].upper().find('X') + 1:])
+  SIZE = HEIGHT * WIDTH
+  BLOCKING = int(args[2])
+  BLOCKINGARG = int(args[2])
+  NONBLOCKING = SIZE - BLOCKING
+  DIR = ""
+  POSITION = {}
+  for arg in args[3:]:
+    arg = arg.upper()
+    # if arg.endswith(".TXT"):
+    #   continue
+    DIR = arg[0].upper()
+    endOfDimension = re.search(r'[VH]\d+X\d+', arg).end()
+    POSITION[(DIR, int(arg[1:arg.find('X')]), int(arg[arg.find('X') + 1:endOfDimension]))] = arg[endOfDimension:] if arg[endOfDimension:] else '#'
+  PZL = ['.' * WIDTH for i in range(HEIGHT)]
+  for coord in POSITION:
+    direction = coord[0]
+    row = coord[1]
+    col = coord[2]
+    content = POSITION[coord]
+    if direction == 'V':
+      for i in content:
+        if i == '#': BLOCKING -= 2
+        else: NONBLOCKING -= 1
+        if col + 1 != WIDTH: PZL[row] = PZL[row][0:col] + i + PZL[row][col + 1:]
+        else: PZL[row] = PZL[row][0:col] + i
+        row += 1
+    else:  # DIR = 'H
+      BLOCKING -= (c := content.count('#')) * 2
+      NONBLOCKING = NONBLOCKING - len(content) + c
+      PZL[row] = PZL[row][0:col] + content + PZL[row][col + len(content):]
+  #might ne a futrue problem im ngl
+  if HEIGHT % 2 + WIDTH % 2 + BLOCKING %2 == 3:
+    print('SCRUMPDIDLY')
+    if PZL[HEIGHT//2][WIDTH//2] == '#': BLOCKING+=1
+    else:
+      BLOCKING-=1
+      add(PZL, WIDTH//2, HEIGHT//2, '#')
+  elif HEIGHT % 2 + WIDTH % 2 == 2:
+    print('SCRUMPDIDLYDOOOOO')
+    add(PZL, WIDTH // 2, HEIGHT // 2, '-')
+
+  #xWords
+  if BLOCKING == SIZE: return printpz(['#'*WIDTH for i in range(HEIGHT)])
+  else:
+    xW = symmetry(PZL)
+    printpz(xW)
+    xW = generate(xW, BLOCKING) #get all the for certain ones
+    printpz(xW)
+    row, col = 0, 0
+    for r in range(len(xW)):
+      for c in range(len(xW[r])):
+        if (ch:=xW[r][c]) in ('-', '.') or ch.isalpha():
+          row, col = r, c
+          break
+    xW = contiguous(xW, BLOCKINGARG-''.join(xW).count('#'), col, row)
+    printpz(xW)
+    #brute force
+    xW = bruteForce(xW, BLOCKINGARG-''.join(xW).count('#'))
+    #take this out for final:
+    for i in range(len(xW)):
+      xW[i] = xW[i].replace('.','-')
+    printpz(xW)
 
 if __name__ == '__main__':
   main()
