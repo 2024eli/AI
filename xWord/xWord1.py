@@ -174,8 +174,9 @@ def contiguous(pzl, blocking, c, r):
     block = 0
   pzl = translate(xW, pzl) #retain all the hashes from xW onto pzl
   return pzl
+
 def threeHV(pzl):
-  possible = {(x, y) for y in range(HEIGHT) for x in range(WIDTH) if pzl[y][x] == "."}
+  possible = {(x, y) for y in range(HEIGHT) for x in range(WIDTH) if pzl[y][x] in ('.', '-') or pzl[y][x].isalpha()}
   blocking = 0
   while possible:
     row, col = (p:=possible.pop())[1], p[0] #(y, x)
@@ -207,29 +208,32 @@ def contig(pzl, c, r):
     i+=1
   if len(innerSet)>1: return False
   return True
+
 def isInvalid(pzl, blocking):
-  newPzl = [i for i in pzl]
   if not threeHV(pzl):
     return True
   row, col = 0, 0
   for r in range(HEIGHT):
     for c in range(WIDTH):
-      if (ch := newPzl[r][c]) in ('-', '.') or ch.isalpha():
+      if (ch := pzl[r][c]) in ('-', '.') or ch.isalpha():
         row, col = r, c
         break
-  if not contig(newPzl, col, row):
+  if not contig(pzl, col, row):
     return True
   return False
 
 #generates valid xWord boards, go through and check if valid
 def bruteForce(pzl, blocking):
-  possible = {(x, y) for y in range(HEIGHT) for x in range(WIDTH) if pzl[y][x] == "."}
+  possible = {(x, y) for y in range(HEIGHT) for x in range(WIDTH) if pzl[y][x] == "."} #make faster through this
   blocks = BLOCKINGARG-''.join(pzl).count('#')
-  newPzl = [i for i in pzl]
-  if isInvalid(newPzl, blocking): return False
+  if blocks < 0: return False
+  if isInvalid(pzl, blocking): return False
+  printpz(pzl)
+  if blocks == 0: return pzl
   for p in possible:
     col, row = p[0],p[1]
-    add(newPzl, col, row, '#')
+    newPzl = add([i for i in pzl], col, row, '#')
+    symmetry(newPzl)
     if newPzl:
       bF = bruteForce(newPzl, blocks)
       if bF:
@@ -274,17 +278,17 @@ def main():
       PZL[row] = PZL[row][0:col] + content + PZL[row][col + len(content):]
   #might ne a futrue problem im ngl
   if HEIGHT % 2 + WIDTH % 2 + BLOCKING %2 == 3:
-    print('SCRUMPDIDLY')
+    # print('SCRUMPDIDLY')
     if PZL[HEIGHT//2][WIDTH//2] == '#': BLOCKING+=1
     else:
       BLOCKING-=1
       add(PZL, WIDTH//2, HEIGHT//2, '#')
   elif HEIGHT % 2 + WIDTH % 2 == 2:
-    print('SCRUMPDIDLYDOOOOO')
+    # print('SCRUMPDIDLYDOOOOO')
     add(PZL, WIDTH // 2, HEIGHT // 2, '-')
 
   #xWords
-  if BLOCKING == SIZE: return printpz(['#'*WIDTH for i in range(HEIGHT)])
+  if BLOCKINGARG == SIZE: return printpz(['#'*WIDTH for i in range(HEIGHT)])
   else:
     xW = symmetry(PZL)
     printpz(xW)
