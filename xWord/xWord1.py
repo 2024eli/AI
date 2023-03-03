@@ -29,13 +29,6 @@ def symmetry(pzl):
         add(pzl, j, i, '-')
   return pzl
 
-def symmetryOne(pzl, col, row):
-  #len()-1-index
-  newC = WIDTH-1-col
-  newR = HEIGHT-1-row
-  add(pzl, newC, newR, '#')
-  return pzl
-
 def add(pzl, x, y, ch):
   pzl[y] = pzl[y][0:x] + ch + pzl[y][x+1:]
   return pzl
@@ -75,14 +68,6 @@ def left(pzl, col, row):
     if (p:=pzl[row][col-l])=='#':break
     if p in ('.','-') or p.isalpha(): left+=1
   return left
-
-def update(pzl, possible, x, y):
-  points = [(x+1, y), (x-1, y), (x, y-1), (x, y+1)]
-  for i in points:
-    p = pzl[i[1]][i[0]]
-    if p in ('.', '-') or p.isalpha():
-      possible.add(i)
-  return possible
 
 #for every spot, look and see if it can be in a 3h and a 3v
 def generate(pzl, blocks):
@@ -124,14 +109,6 @@ def check1(pzl, ch):
         return (j, i)
   return True
 
-def check2(pzl):
-  symCount = []
-  for i in pzl:
-    for j in i:
-      if j not in symCount and j != '#': symCount.append(j)
-      if len(symCount) > 2: return False
-  return True
-
 def translate(hashes, pzl):
   for i in range(HEIGHT):
     for j in range(WIDTH):
@@ -146,7 +123,7 @@ def contiguousHelper(pzl, c, r, ch, symbolsUsed):
     contiguousHelper(pzl, c, r-1, ch, symbolsUsed)
     contiguousHelper(pzl, c+1, r, ch, symbolsUsed)
     contiguousHelper(pzl, c-1, r, ch, symbolsUsed)
-  # return pzl
+  return pzl
 
 def contiguous(pzl, blocking, c, r):
   xW = [i for i in pzl]
@@ -182,76 +159,113 @@ def contiguous(pzl, blocking, c, r):
   pzl = translate(xW, pzl) #retain all the hashes from xW onto pzl
   return pzl
 
-def threeHV(pzl):
-  # possible = {(x, y) for y in range(HEIGHT) for x in range(WIDTH) if pzl[y][x] in ('.', '-') or pzl[y][x].isalpha()}
-  blocking = 0
-  # while possible:
-  for row, str in enumerate(pzl):
-    for col, ch in enumerate(str):
-      # row, col = (p:=possible.pop())[1], p[0] #(y, x)
-      # if pzl[row][col] == '#': continue
-      if ch == '#': continue
-      l = left(pzl, col, row)
-      r = right(pzl, col, row)
-      u = up(pzl, col, row)
-      d = down(pzl, col, row)
-      # print(row, col, l, r, u, d)
-      if (v:=u+d) < 2:
-        return False
-      if (h:=l+r) < 2:
-        return False
-      # pzl = symmetry(pzl)
-  return True
-
-def contig(pzl, c, r):
-  xW = [i for i in pzl]
-  innerSet = set()
-  contiguousHelper(xW, c, r, '=', innerSet)
-  isIt = check1(xW, '=')
-  innerSet.add('=')
-  i = 0
-  while isIt != True:
-    symbol = SYMBOLSET[i]
-    contiguousHelper(xW, isIt[0], isIt[1], symbol, innerSet)
-    innerSet.add(symbol)
-    isIt = check1(xW, symbol)
-    i+=1
-  if len(innerSet)>1: return False
-  return True
-
-def isInvalid(pzl, blocking):
-  if not threeHV(pzl):
-    return True
+def coord(pzl):
   row, col = 0, 0
   for r in range(HEIGHT):
     for c in range(WIDTH):
       if (ch := pzl[r][c]) in ('-', '.') or ch.isalpha():
         row, col = r, c
         break
-  if not contig(pzl, col, row):
-    return True
-  return False
+  return col, row
 
-#generates valid xWord boards, go through and check if valid
-def bruteForce(pzl, blocking):
-  # possible = {(x, y) for y in range(HEIGHT) for x in range(WIDTH) if pzl[y][x] == "."} #make faster through this
-  blocks = BLOCKINGARG-''.join(pzl).count('#')
-  if blocks < 0: return False
-  if isInvalid(pzl, blocking): return False
-  # printpz(pzl)
-  if blocks == 0: return pzl
-  # for p in possible:
-  for row, str in enumerate(pzl):
-    for col, ch in enumerate(str):
-      # col, row = p[0],p[1]
-      if ch=='.':
-        newPzl = add([i for i in pzl], col, row, '#')
-        # symmetry(pzl)
-        symmetryOne(newPzl, col, row)
-        if newPzl:
-          bF = bruteForce(newPzl, blocks)
-          if bF:
-            return bF
+def printpzString(pzl):
+  if pzl == False:
+    print('False')
+    return False
+  for ct, it in enumerate(pzl):
+    print(it, end=' ')
+    if (ct+1) % WIDTH == 0:
+      print()
+  print()
+
+def cont(pzl, index):
+  if pzl[index] != '-' and not pzl[index].isalpha(): return pzl
+  col, row = index % WIDTH, index // WIDTH
+  pzl = pzl[:index] + '$' + pzl[index+1:]
+  if row > 0:
+    pzl = cont(pzl, index-WIDTH)
+  if row < HEIGHT-1:
+    pzl = cont(pzl, index+WIDTH)
+  if col > 0:
+    pzl = cont(pzl, index-1)
+  if col < WIDTH-1:
+    pzl = cont(pzl, index+1)
+  return pzl
+
+def insert(pzl, ind):
+  if pzl[ind].isalpha(): return False
+  pzl = pzl[:ind] + '#' + pzl[ind+1:]
+  row, col = ind // WIDTH, ind % WIDTH
+  if row != 0 and pzl[(up:=(row-1)*WIDTH+col)] != '#':
+    if row in (1, 2):
+      pzl = insert(pzl, up)
+      if pzl==False: return False
+    else: #has to have at least a two margin on top
+      go = False
+      for i in range((row-2)*WIDTH+col, (row-4)*WIDTH+col, -WIDTH):
+        if pzl[i] == '#':
+          go = True
+          break
+      if go:
+        pzl = insert(pzl, up)
+        if not pzl: return False
+  if row != HEIGHT-1 and pzl[(down:=(row+1)*WIDTH+col)] != '#':
+    if row > HEIGHT-4:
+      pzl = insert(pzl, down)
+      if not pzl: return False
+    else:
+      go = False
+      for i in range((row + 2) * WIDTH + col, (row + 4) * WIDTH + col, WIDTH):
+        if pzl[i] == '#':
+          go = True
+          break
+      if go:
+        pzl = insert(pzl, down)
+        if not pzl: return False
+  if col != 0 and pzl[(left:=row*WIDTH+col-1)] != '#':
+    if col in (1, 2):
+      pzl = insert(pzl, left)
+      if not pzl: return False
+    else:
+      go = False
+      for i in range(row * WIDTH + col-3, row * WIDTH + col-1):
+        if pzl[i] == '#':
+          go = True
+          break
+      if go:
+        pzl = insert(pzl, left)
+        if not pzl: return False
+  if col != WIDTH-1 and pzl[(right:=row*WIDTH+col+1)] != '#':
+    if col > WIDTH-4:
+      pzl = insert(pzl, right)
+      if not pzl: return False
+    else:
+      go = False
+      for i in range(row * WIDTH + col+2, row * WIDTH + col+4):
+        if pzl[i] == '#':
+          go = True
+          break
+      if go:
+        pzl = insert(pzl, right)
+        if not pzl: return False
+  return pzl
+
+def put(pzl, ind):
+  pzl = insert(pzl, ind)
+  if pzl: pzl = insert(pzl, SIZE-ind-1)
+  return pzl
+
+def bruteForce(pzl):
+  if '-' in cont(pzl, pzl.find('-')): return False
+  if (bl:=pzl.count('#')) == BLOCKINGARG: return pzl
+  elif bl > BLOCKINGARG: return False
+  # printpzString(pzl)
+  for i in {j for j, c in enumerate(pzl) if c == '-'}:
+    newPzl = put(pzl, i)
+    if newPzl:
+      bF = bruteForce(newPzl)
+      if bF:
+        return bF
   return False
 
 def main():
@@ -276,13 +290,8 @@ def main():
     POSITION[(DIR, int(arg[1:arg.find('X')]), int(arg[arg.find('X') + 1:endOfDimension]))] = arg[endOfDimension:] if arg[endOfDimension:] else '#'
   PZL = ['.' * WIDTH for i in range(HEIGHT)]
   if HEIGHT % 2 + WIDTH % 2 + BLOCKING %2 == 3:
-    # print('SCRUMPDIDLY')
-    if PZL[HEIGHT//2][WIDTH//2] == '#': BLOCKING+=1
-    else:
-      BLOCKING-=1
-      add(PZL, WIDTH//2, HEIGHT//2, '#')
+    add(PZL, WIDTH//2, HEIGHT//2, '#')
   elif HEIGHT % 2 + WIDTH % 2 == 2:
-    # print('SCRUMPDIDLYDOOOOO')
     add(PZL, WIDTH // 2, HEIGHT // 2, '-')
   for coord in POSITION:
     direction = coord[0]
@@ -313,16 +322,15 @@ def main():
           row, col = r, c
           break
     xW = contiguous(xW, BLOCKINGARG-''.join(xW).count('#'), col, row)
-    #brute force
-    xW = bruteForce(xW, BLOCKINGARG-''.join(xW).count('#'))
-    #take this out for final:
-    for i in range(len(xW)):
-      xW[i] = xW[i].replace('.','-')
     printpz(xW)
-    print(f"Time: {(time.process_time()-start):.4g}s")
+    #brute force
+    xW = ''.join(xW)
+    xW = xW.replace('.', '-')
+    xW = bruteForce(xW)
+    printpzString(xW)
+    print(f"Time: {(time.process_time() - start):.4g}s")
 
 if __name__ == '__main__':
   main()
 
 # Evelyn Li, pd 7, 2024
-
