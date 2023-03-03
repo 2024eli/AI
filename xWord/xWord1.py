@@ -3,7 +3,7 @@ import re
 import random
 import time
 
-args = '9x30 50 h4x12e# h3x9t# h2x9# v2x0sum V5x1#i V8x26g'.split(' ')
+# args = 'someDct.txt 13x13 32 H1x4#Toe# H9x2# V3x6# H10x0Scintillating V0x5stirrup H4x2##Ordained V0x1Proc V0x12Mah V5x0zoo'.split(' ')
 if not args[0].upper().endswith('.TXT'):
   args = [0] + args
 
@@ -23,9 +23,9 @@ def symmetry(pzl):
     flip.append(pzlFlip[i][::-1])
   for i, f in enumerate(flip):
     for j, ch in enumerate(f):
-      if ch == '#' and not pzl[i][j].isalpha():
+      if ch == '#' and not 65 <= ord(pzl[i][j]) <= 90:
         add(pzl, j, i, '#')
-      if ch.isalpha() and pzl[i][j] == '.':
+      if 65 <= ord(ch) <= 90 and pzl[i][j] == '.':
         add(pzl, j, i, '-')
   return pzl
 
@@ -183,21 +183,24 @@ def contiguous(pzl, blocking, c, r):
   return pzl
 
 def threeHV(pzl):
-  possible = {(x, y) for y in range(HEIGHT) for x in range(WIDTH) if pzl[y][x] in ('.', '-') or pzl[y][x].isalpha()}
+  # possible = {(x, y) for y in range(HEIGHT) for x in range(WIDTH) if pzl[y][x] in ('.', '-') or pzl[y][x].isalpha()}
   blocking = 0
-  while possible:
-    row, col = (p:=possible.pop())[1], p[0] #(y, x)
-    if pzl[row][col] == '#': continue
-    l = left(pzl, col, row)
-    r = right(pzl, col, row)
-    u = up(pzl, col, row)
-    d = down(pzl, col, row)
-    # print(row, col, l, r, u, d)
-    if (v:=u+d) < 2:
-      return False
-    if (h:=l+r) < 2:
-      return False
-    # pzl = symmetry(pzl)
+  # while possible:
+  for row, str in enumerate(pzl):
+    for col, ch in enumerate(str):
+      # row, col = (p:=possible.pop())[1], p[0] #(y, x)
+      # if pzl[row][col] == '#': continue
+      if ch == '#': continue
+      l = left(pzl, col, row)
+      r = right(pzl, col, row)
+      u = up(pzl, col, row)
+      d = down(pzl, col, row)
+      # print(row, col, l, r, u, d)
+      if (v:=u+d) < 2:
+        return False
+      if (h:=l+r) < 2:
+        return False
+      # pzl = symmetry(pzl)
   return True
 
 def contig(pzl, c, r):
@@ -231,33 +234,37 @@ def isInvalid(pzl, blocking):
 
 #generates valid xWord boards, go through and check if valid
 def bruteForce(pzl, blocking):
-  possible = {(x, y) for y in range(HEIGHT) for x in range(WIDTH) if pzl[y][x] == "."} #make faster through this
+  # possible = {(x, y) for y in range(HEIGHT) for x in range(WIDTH) if pzl[y][x] == "."} #make faster through this
   blocks = BLOCKINGARG-''.join(pzl).count('#')
   if blocks < 0: return False
+  if isInvalid(pzl, blocking): return False
   # printpz(pzl)
-  if blocks == 0:
-    if isInvalid(pzl, blocking): return False
-    return pzl
-  for p in possible:
-    col, row = p[0],p[1]
-    newPzl = add([i for i in pzl], col, row, '#')
-    newPzl = symmetryOne(newPzl, col, row) #change to better function
-    if newPzl:
-      bF = bruteForce(newPzl, blocks)
-      if bF:
-        return bF
+  if blocks == 0: return pzl
+  # for p in possible:
+  for row, str in enumerate(pzl):
+    for col, ch in enumerate(str):
+      # col, row = p[0],p[1]
+      if ch=='.':
+        newPzl = add([i for i in pzl], col, row, '#')
+        # symmetry(pzl)
+        symmetryOne(newPzl, col, row)
+        if newPzl:
+          bF = bruteForce(newPzl, blocks)
+          if bF:
+            return bF
   return False
 
 def main():
   start = time.process_time()
   #globals
-  global HEIGHT, WIDTH, SIZE, BLOCKING, BLOCKINGARG, DIR, POSITION, PZL, SYMBOLSET
+  global HEIGHT, WIDTH, SIZE, BLOCKING, BLOCKINGARG, NONBLOCKING, DIR, POSITION, PZL, SYMBOLSET
   SYMBOLSET = '~`!@$%^&*()_+;:<>?,'
   HEIGHT = int(args[1][0:args[1].upper().find('X')])
   WIDTH = int(args[1][args[1].upper().find('X') + 1:])
   SIZE = HEIGHT * WIDTH
   BLOCKING = int(args[2])
   BLOCKINGARG = int(args[2])
+  NONBLOCKING = SIZE - BLOCKING
   DIR = ""
   POSITION = {}
   for arg in args[3:]:
@@ -268,14 +275,12 @@ def main():
     endOfDimension = re.search(r'[VH]\d+X\d+', arg).end()
     POSITION[(DIR, int(arg[1:arg.find('X')]), int(arg[arg.find('X') + 1:endOfDimension]))] = arg[endOfDimension:] if arg[endOfDimension:] else '#'
   PZL = ['.' * WIDTH for i in range(HEIGHT)]
-  # might ne a futrue problem im ngl
-  if HEIGHT % 2 + WIDTH % 2 + BLOCKING % 2 == 3:
+  if HEIGHT % 2 + WIDTH % 2 + BLOCKING %2 == 3:
     # print('SCRUMPDIDLY')
-    if PZL[HEIGHT // 2][WIDTH // 2] == '#':
-      BLOCKING += 1
+    if PZL[HEIGHT//2][WIDTH//2] == '#': BLOCKING+=1
     else:
-      BLOCKING -= 1
-      add(PZL, WIDTH // 2, HEIGHT // 2, '#')
+      BLOCKING-=1
+      add(PZL, WIDTH//2, HEIGHT//2, '#')
   elif HEIGHT % 2 + WIDTH % 2 == 2:
     # print('SCRUMPDIDLYDOOOOO')
     add(PZL, WIDTH // 2, HEIGHT // 2, '-')
@@ -287,20 +292,20 @@ def main():
     if direction == 'V':
       for i in content:
         if i == '#': BLOCKING -= 2
+        else: NONBLOCKING -= 1
         if col + 1 != WIDTH: PZL[row] = PZL[row][0:col] + i + PZL[row][col + 1:]
         else: PZL[row] = PZL[row][0:col] + i
         row += 1
     else:  # DIR = 'H
       BLOCKING -= (c := content.count('#')) * 2
+      NONBLOCKING = NONBLOCKING - len(content) + c
       PZL[row] = PZL[row][0:col] + content + PZL[row][col + len(content):]
 
   #xWords
   if BLOCKINGARG == SIZE: return printpz(['#'*WIDTH for i in range(HEIGHT)])
   else:
     xW = symmetry(PZL)
-    printpz(xW)
     xW = generate(xW, BLOCKING) #get all the for certain ones
-    printpz(xW)
     row, col = 0, 0
     for r in range(len(xW)):
       for c in range(len(xW[r])):
@@ -308,13 +313,11 @@ def main():
           row, col = r, c
           break
     xW = contiguous(xW, BLOCKINGARG-''.join(xW).count('#'), col, row)
-    printpz(xW)
     #brute force
-    # possible = {(x, y) for y in range(HEIGHT) for x in range(WIDTH) if xW[y][x] == "."}  # make faster through this
     xW = bruteForce(xW, BLOCKINGARG-''.join(xW).count('#'))
-    # #take this out for final:
-    # for i in range(len(xW)):
-    #   xW[i] = xW[i].replace('.','-')
+    #take this out for final:
+    for i in range(len(xW)):
+      xW[i] = xW[i].replace('.','-')
     printpz(xW)
     print(f"Time: {(time.process_time()-start):.4g}s")
 
@@ -322,5 +325,4 @@ if __name__ == '__main__':
   main()
 
 # Evelyn Li, pd 7, 2024
-
 
