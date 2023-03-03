@@ -3,7 +3,7 @@ import re
 import random
 import time
 
-# args = 'someDct.txt 13x13 32 H1x4#Toe# H9x2# V3x6# H10x0Scintillating V0x5stirrup H4x2##Ordained V0x1Proc V0x12Mah V5x0zoo'.split(' ')
+args = '9x30 50 h4x12e# h3x9t# h2x9# v2x0sum V5x1#i V8x26g'.split(' ')
 if not args[0].upper().endswith('.TXT'):
   args = [0] + args
 
@@ -23,10 +23,17 @@ def symmetry(pzl):
     flip.append(pzlFlip[i][::-1])
   for i, f in enumerate(flip):
     for j, ch in enumerate(f):
-      if ch == '#' and not 65 <= ord(pzl[i][j]) <= 90:
+      if ch == '#' and not pzl[i][j].isalpha():
         add(pzl, j, i, '#')
-      if 65 <= ord(ch) <= 90 and pzl[i][j] == '.':
+      if ch.isalpha() and pzl[i][j] == '.':
         add(pzl, j, i, '-')
+  return pzl
+
+def symmetryOne(pzl, col, row):
+  #len()-1-index
+  newC = WIDTH-1-col
+  newR = HEIGHT-1-row
+  add(pzl, newC, newR, '#')
   return pzl
 
 def add(pzl, x, y, ch):
@@ -190,7 +197,7 @@ def threeHV(pzl):
       return False
     if (h:=l+r) < 2:
       return False
-    pzl = symmetry(pzl)
+    # pzl = symmetry(pzl)
   return True
 
 def contig(pzl, c, r):
@@ -227,13 +234,14 @@ def bruteForce(pzl, blocking):
   possible = {(x, y) for y in range(HEIGHT) for x in range(WIDTH) if pzl[y][x] == "."} #make faster through this
   blocks = BLOCKINGARG-''.join(pzl).count('#')
   if blocks < 0: return False
-  if isInvalid(pzl, blocking): return False
-  printpz(pzl)
-  if blocks == 0: return pzl
+  # printpz(pzl)
+  if blocks == 0:
+    if isInvalid(pzl, blocking): return False
+    return pzl
   for p in possible:
     col, row = p[0],p[1]
     newPzl = add([i for i in pzl], col, row, '#')
-    symmetry(newPzl)
+    newPzl = symmetryOne(newPzl, col, row) #change to better function
     if newPzl:
       bF = bruteForce(newPzl, blocks)
       if bF:
@@ -241,15 +249,15 @@ def bruteForce(pzl, blocking):
   return False
 
 def main():
+  start = time.process_time()
   #globals
-  global HEIGHT, WIDTH, SIZE, BLOCKING, BLOCKINGARG, NONBLOCKING, DIR, POSITION, PZL, SYMBOLSET
+  global HEIGHT, WIDTH, SIZE, BLOCKING, BLOCKINGARG, DIR, POSITION, PZL, SYMBOLSET
   SYMBOLSET = '~`!@$%^&*()_+;:<>?,'
   HEIGHT = int(args[1][0:args[1].upper().find('X')])
   WIDTH = int(args[1][args[1].upper().find('X') + 1:])
   SIZE = HEIGHT * WIDTH
   BLOCKING = int(args[2])
   BLOCKINGARG = int(args[2])
-  NONBLOCKING = SIZE - BLOCKING
   DIR = ""
   POSITION = {}
   for arg in args[3:]:
@@ -260,6 +268,17 @@ def main():
     endOfDimension = re.search(r'[VH]\d+X\d+', arg).end()
     POSITION[(DIR, int(arg[1:arg.find('X')]), int(arg[arg.find('X') + 1:endOfDimension]))] = arg[endOfDimension:] if arg[endOfDimension:] else '#'
   PZL = ['.' * WIDTH for i in range(HEIGHT)]
+  # might ne a futrue problem im ngl
+  if HEIGHT % 2 + WIDTH % 2 + BLOCKING % 2 == 3:
+    # print('SCRUMPDIDLY')
+    if PZL[HEIGHT // 2][WIDTH // 2] == '#':
+      BLOCKING += 1
+    else:
+      BLOCKING -= 1
+      add(PZL, WIDTH // 2, HEIGHT // 2, '#')
+  elif HEIGHT % 2 + WIDTH % 2 == 2:
+    # print('SCRUMPDIDLYDOOOOO')
+    add(PZL, WIDTH // 2, HEIGHT // 2, '-')
   for coord in POSITION:
     direction = coord[0]
     row = coord[1]
@@ -268,24 +287,12 @@ def main():
     if direction == 'V':
       for i in content:
         if i == '#': BLOCKING -= 2
-        else: NONBLOCKING -= 1
         if col + 1 != WIDTH: PZL[row] = PZL[row][0:col] + i + PZL[row][col + 1:]
         else: PZL[row] = PZL[row][0:col] + i
         row += 1
     else:  # DIR = 'H
       BLOCKING -= (c := content.count('#')) * 2
-      NONBLOCKING = NONBLOCKING - len(content) + c
       PZL[row] = PZL[row][0:col] + content + PZL[row][col + len(content):]
-  #might ne a futrue problem im ngl
-  if HEIGHT % 2 + WIDTH % 2 + BLOCKING %2 == 3:
-    # print('SCRUMPDIDLY')
-    if PZL[HEIGHT//2][WIDTH//2] == '#': BLOCKING+=1
-    else:
-      BLOCKING-=1
-      add(PZL, WIDTH//2, HEIGHT//2, '#')
-  elif HEIGHT % 2 + WIDTH % 2 == 2:
-    # print('SCRUMPDIDLYDOOOOO')
-    add(PZL, WIDTH // 2, HEIGHT // 2, '-')
 
   #xWords
   if BLOCKINGARG == SIZE: return printpz(['#'*WIDTH for i in range(HEIGHT)])
@@ -303,11 +310,13 @@ def main():
     xW = contiguous(xW, BLOCKINGARG-''.join(xW).count('#'), col, row)
     printpz(xW)
     #brute force
+    # possible = {(x, y) for y in range(HEIGHT) for x in range(WIDTH) if xW[y][x] == "."}  # make faster through this
     xW = bruteForce(xW, BLOCKINGARG-''.join(xW).count('#'))
-    #take this out for final:
-    for i in range(len(xW)):
-      xW[i] = xW[i].replace('.','-')
+    # #take this out for final:
+    # for i in range(len(xW)):
+    #   xW[i] = xW[i].replace('.','-')
     printpz(xW)
+    print(f"Time: {(time.process_time()-start):.4g}s")
 
 if __name__ == '__main__':
   main()
