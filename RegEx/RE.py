@@ -42,6 +42,16 @@ myRegexLst = [
   r"/^(?=((10*1)?0*)*$)([10]{2})*[10]$/",  # 67 36 22
   r"/^(0|(1(01*0)*10*)+)$/",  # 68 20 19
   r"/^1((10*1)*(01*0)?)*(01*)?$/",  # 69 26 19
+  r"/^(?=.*a)(?=.*e)(?=.*i)(?=.*o)(?=.*u)[a-z]*$/m", #70 43
+  r"/^([^aeiou\WA-Z]*[aeiou]){5}[^aeiou\WA-Z]*$/m", #71 42
+  r"/^[a-z]*[^aeiou\WA-Z]w(?![rh]?[aeiou])[a-z]*$/m", #72 44
+  r"/(?![A-Z]+)^((?=(\w)(\w)(\w))\w*\4\3\2|aa?)$/m", #73 43
+  r"/^[^btA-Z\W]*(bt|tb)[^btA-Z\W]*$/m", #74 31
+  r"/^([a-z])*\1[a-z]*$/m", #75 18
+  r"/(\w)*(\w*\1){5}\w*$/m", #76 19
+  r"/((\w)\2){3}\w*$/m", #77 15
+  r"/(\w*[^aeiou\W]){13}\w*$/m", #78 24
+  r"/^(?!(.)*(.*\1){2})[a-z]+$/m", #79 25
 ]
 
 '''
@@ -93,6 +103,18 @@ Q66: Match all words where each of the five vowels occurs exactly once.  (39)
 Q67: Match all binary strings that have an odd number of 0s and an even number of 1s.  (22)
 Q68: Match all binary integer strings that are divisible by 3.  (19)
 Q69: Match all binary integer strings that are not divisible by 3.  (19)
+
+Find all words ...
+70: ... where each vowel occurs at least once
+71: ... containing exactly 5 vowels
+72: ... with w acting as vowel
+73: ... where if all but the first 3 and last 3 letters are removed, a palindrome results
+74: ... where there is exactly one b and one t, and they are adjacent to each other
+75: ... with the longest contiguous block of one letter
+76: ... with the greatest number of a repeated letter
+77: ... with the greatest number of adjacent pairs of identical letters
+78: ... with the greatest number of consonants
+79: ... where no letter is repeated more than once
 '''
 
 if idx < len(myRegexLst):
