@@ -268,14 +268,19 @@ def bruteForce(pzl):
         return bF
   return False
 
+# ------------------ XWORD 2 METHODS ------------------------------------ #
+
+
 def main():
   start = time.process_time()
   #globals
-  global HEIGHT, WIDTH, SIZE, BLOCKING, BLOCKINGARG, NONBLOCKING, DIR, POSITION, PZL, SYMBOLSET
+  global HEIGHT, WIDTH, SIZE, BLOCKING, BLOCKINGARG, NONBLOCKING, DIR, POSITION, PZL, SYMBOLSET, WORDS
   SYMBOLSET = '~`!@$%^&*()_+;:<>?,'
+  WORDS = list()
   HEIGHT = int(args[1][0:args[1].upper().find('X')])
   WIDTH = int(args[1][args[1].upper().find('X') + 1:])
   SIZE = HEIGHT * WIDTH
+  file = args[0]
   BLOCKING = int(args[2])
   BLOCKINGARG = int(args[2])
   NONBLOCKING = SIZE - BLOCKING
@@ -283,8 +288,6 @@ def main():
   POSITION = {}
   for arg in args[3:]:
     arg = arg.upper()
-    # if arg.endswith(".TXT"):
-    #   continue
     DIR = arg[0].upper()
     endOfDimension = re.search(r'[VH]\d+X\d+', arg).end()
     POSITION[(DIR, int(arg[1:arg.find('X')]), int(arg[arg.find('X') + 1:endOfDimension]))] = arg[endOfDimension:] if arg[endOfDimension:] else '#'
@@ -309,6 +312,11 @@ def main():
       BLOCKING -= (c := content.count('#')) * 2
       NONBLOCKING = NONBLOCKING - len(content) + c
       PZL[row] = PZL[row][0:col] + content + PZL[row][col + len(content):]
+    with open(args[0]) as f:
+      for line in f:
+        word = line.strip()
+        if len(word) < 3: continue
+        WORDS.append(word)
 
   #xWords
   if BLOCKINGARG == SIZE: return printpz(['#'*WIDTH for i in range(HEIGHT)])
@@ -322,7 +330,7 @@ def main():
           row, col = r, c
           break
     xW = contiguous(xW, BLOCKINGARG-''.join(xW).count('#'), col, row)
-    printpz(xW)
+
     #brute force
     xW = ''.join(xW)
     xW = xW.replace('.', '-')
