@@ -284,14 +284,48 @@ def place(pzl, word, ind, direc):
 def fillWord(pzl, wordSet):
   seen = [i for i in wordSet]
   inWord = False
+  ind = 0
+  #put in one vertically
+  while ind < len(pzl):
+    i = pzl[ind]
+    posWordLen = 0
+    wordRegex = '^'
+    if i != '#':
+      while 0 <= (posWordLen*WIDTH+ind) < SIZE and pzl[posWordLen*WIDTH+ind] != '#':
+        if pzl[posWordLen*WIDTH+ind].isalpha():
+          wordRegex += pzl[posWordLen*WIDTH+ind]
+        else:
+          wordRegex += '\w'
+        posWordLen+=1
+      posWordLen=0
+      wordRegex+='$'
+      print(wordRegex)
+      if wordRegex.find('\w') == -1:
+        ind+=1
+        continue
+      c = 0
+      word = ''
+      while c < len(seen):
+        word = seen[c]
+        if re.search(wordRegex, word, flags=re.M):
+          seen[c] = ''
+          break
+        c += 1
+      # print(word)
+      pzl = place(pzl, word, ind, 'V')
+      printpzString(pzl)
+      break #only want one vertical
+    ind += 1
+
   #goes horizontally
   ind = 0
   while ind < len(pzl):
     i = pzl[ind]
     posWordLen = 0
     wordRegex = '^'
-    if i == '-':
+    if i != '#':
       while (posWordLen+ind)//WIDTH == ind // WIDTH and pzl[posWordLen+ind] != '#': #can it even be an alpha?
+        # print(pzl[posWordLen + ind], posWordLen + ind)
         if pzl[posWordLen+ind].isalpha():
           wordRegex += pzl[posWordLen+ind]
         else:
@@ -299,7 +333,10 @@ def fillWord(pzl, wordSet):
         posWordLen+=1
       posWordLen = 0
       wordRegex+='$'
-      # print(wordRegex)
+      print(wordRegex)
+      if wordRegex.find('\w') == -1:
+        ind+=1
+        continue
       c = 0
       word = ''
       while c < len(seen):
@@ -311,6 +348,7 @@ def fillWord(pzl, wordSet):
       # print(word)
       pzl = place(pzl, word, ind, 'H')
       printpzString(pzl)
+      print()
     ind+=1
   return pzl
 
