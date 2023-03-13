@@ -4,8 +4,6 @@ import random
 import time
 
 # args = 'someDct.txt 13x13 32 H1x4#Toe# H9x2# V3x6# H10x0Scintillating V0x5stirrup H4x2##Ordained V0x1Proc V0x12Mah V5x0zoo'.split(' ')
-if not args[0].upper().endswith('.TXT'):
-  args = [0] + args
 
 def printpz(solved):
   for i in solved:
@@ -269,6 +267,52 @@ def bruteForce(pzl):
   return False
 
 # ------------------ XWORD 2 METHODS ------------------------------------ #
+def place(pzl, word, ind, direc):
+  newPzl = pzl
+  count = -1
+  if direc == 'H':
+    for i in range(ind, ind+len(word)): #lowkey this range kinda sus
+      count+=1
+      newPzl = newPzl[0:i] + word[count] + newPzl[i+1:]
+  else:
+    for i in range(0, len(word)):
+      count+=1
+      index = ind+i*WIDTH
+      newPzl = newPzl[:index] + word[count] + newPzl[index+1:]
+  return newPzl
+
+def fillWord(pzl, wordSet):
+  seen = [i for i in wordSet]
+  inWord = False
+  #goes horizontally
+  ind = 0
+  while ind < len(pzl):
+    i = pzl[ind]
+    posWordLen = 0
+    wordRegex = '^'
+    if i == '-':
+      while (posWordLen+ind)//WIDTH == ind // WIDTH and pzl[posWordLen+ind] != '#': #can it even be an alpha?
+        if pzl[posWordLen+ind].isalpha():
+          wordRegex += pzl[posWordLen+ind]
+        else:
+          wordRegex += '\w'
+        posWordLen+=1
+      posWordLen = 0
+      wordRegex+='$'
+      # print(wordRegex)
+      c = 0
+      word = ''
+      while c < len(seen):
+        word = seen[c]
+        if re.search(wordRegex, word, flags=re.M):
+          seen[c] = ''
+          break
+        c+=1
+      # print(word)
+      pzl = place(pzl, word, ind, 'H')
+      printpzString(pzl)
+    ind+=1
+  return pzl
 
 
 def main():
@@ -312,11 +356,11 @@ def main():
       BLOCKING -= (c := content.count('#')) * 2
       NONBLOCKING = NONBLOCKING - len(content) + c
       PZL[row] = PZL[row][0:col] + content + PZL[row][col + len(content):]
-    with open(args[0]) as f:
-      for line in f:
-        word = line.strip()
-        if len(word) < 3: continue
-        WORDS.append(word)
+  with open(args[0]) as f:
+    for line in f:
+      word = line.strip()
+      if len(word) < 3: continue
+      WORDS.append(word.upper())
 
   #xWords
   if BLOCKINGARG == SIZE: return printpz(['#'*WIDTH for i in range(HEIGHT)])
@@ -336,6 +380,8 @@ def main():
     xW = xW.replace('.', '-')
     xW = bruteForce(xW)
     printpzString(xW)
+    xW_Words = fillWord(xW, WORDS)
+    printpzString(xW_Words)
     print(f"Time: {(time.process_time() - start):.4g}s")
 
 if __name__ == '__main__':
