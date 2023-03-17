@@ -176,13 +176,13 @@ def printpzString(pzl):
       print()
   print()
 
-def printpzString1(pzl, width):
+def printHASH(pzl):
   if pzl == False:
     print('False')
     return False
   for ct, it in enumerate(pzl):
     print(it, end=' ')
-    if (ct+1) % width == 0:
+    if (ct+1) % (WIDTH+2) == 0:
       print()
   print()
 
@@ -296,35 +296,43 @@ def pickWord(spec):
     word = random.choice(WORDS[length])
   return word
 
-def placeWord(pzl, word, ind, direction):
+def placeWord(pzl, word, ind):
   width = WIDTH+2
-  #put safety hashes all around?
   newPzl = pzl
-  if direction == 'V':
-    for i in range(len(word)):
-      index = ind+i*width
-      newPzl = newPzl[:index] + word[i] + newPzl[index+1:]
-  elif direction == 'H':
-    for i in range(len(word)):
-      index = ind+i
-      newPzl = newPzl[:i] + word[i] + newPzl[i+1:]
-  printpzString1(newPzl, WIDTH+2)
+  for i in range(len(word)):
+    index = ind+i
+    newPzl = newPzl[:index] + word[i] + newPzl[index+1:]
+  printHASH(newPzl)
   return newPzl
 
 def addHashesToPzl(pzl):
-  lst = ['' for i in range(WIDTH)]
-  for i in range(WIDTH):
+  lst = ['' for i in range(HEIGHT)]
+  for i in range(HEIGHT):
     lst[i] = '#' + pzl[i*WIDTH:(i+1)*WIDTH] + '#'
-  newPzl = '#'*(WIDTH+2) + ''.join(lst) + '#'*(WIDTH+2)
+  newPzl = ''.join(lst)
   return newPzl
 
 def takeOutHashes(pzl):
-  newPzl = pzl[WIDTH+2:-(WIDTH+2)]
-  lst = ['' for i in range(WIDTH)]
-  for i in range(WIDTH):
+  newPzl = pzl
+  lst = ['' for i in range(HEIGHT)]
+  for i in range(HEIGHT):
     lst[i] = newPzl[i*(WIDTH+2):(i+1)*(WIDTH+2)][1:-1]
   newPzl = ''.join(lst)
   return newPzl
+
+def transpose(pzl):
+  global WIDTH, HEIGHT
+  newPzl = ''
+  for rs in range(0, len(pzl), WIDTH):
+    newPzl += pzl[rs:rs+WIDTH][::-1]
+  nnewPzl = ''
+  for cs in range(WIDTH):
+    nnewPzl += newPzl[cs::WIDTH][::-1]
+  WIDTH, HEIGHT = HEIGHT, WIDTH
+  nnewPzl = nnewPzl[::-1]
+  print('TRANSPOSE:')
+  printpzString(nnewPzl)
+  return nnewPzl
 
 dctSeen = {}
 def fillWord(xW, wordSet):
@@ -374,12 +382,12 @@ def main():
       BLOCKING -= (c := content.count('#')) * 2
       NONBLOCKING = NONBLOCKING - len(content) + c
       PZL[row] = PZL[row][0:col] + content + PZL[row][col + len(content):]
-  WORDS = [list() for i in range(SIZE+1)]
+  WORDS = [list() for i in range(SIZE+10)]
   with open(args[0]) as f:
     for line in f:
       word = line.strip()
       if len(word) < 3 or re.search(r'^\d', word): continue
-      WORDS[len(word)].append(word)
+      WORDS[len(word)].append(word.upper())
 
   #xWords
   if BLOCKINGARG == SIZE: return printpz(['#'*WIDTH for i in range(HEIGHT)])
