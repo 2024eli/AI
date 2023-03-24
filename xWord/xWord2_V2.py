@@ -3,7 +3,7 @@ import re
 import random
 import time
 
-# args = 'someDct.txt 13x13 32 H1x4#Toe# H9x2# V3x6# H10x0Scintillating V0x5stirrup H4x2##Ordained V0x1Proc V0x12Mah V5x0zoo'.split(' ')
+# args = ['dctEckel.txt', '7x7', '11']
 
 def printpz(solved):
   for i in solved:
@@ -277,33 +277,116 @@ def bruteForce(pzl):
   return False
 
 # ------------------ XWORD 2 METHODS ------------------------------------ #
-def isValid(word, spec):
-  for ct, it in enumerate(spec):
-    if it != '-' and word[ct] != spec[ct]:
-      return False
-  return True
+def place(pzl, word, ind, direc):
+  newPzl = pzl
+  count = -1
+  if direc == 'H':
+    for i in range(ind, ind+len(word)): #lowkey this range kinda sus
+      count+=1
+      newPzl = newPzl[0:i] + word[count] + newPzl[i+1:]
+  else:
+    for i in range(0, len(word)):
+      count+=1
+      index = ind+i*WIDTH
+      newPzl = newPzl[:index] + word[count] + newPzl[index+1:]
+  return newPzl
 
-def isWord(spec):
-  return spec in WORDS[len(spec)]
+def fillWord(pzl, wordSet):
+  seen = [i for i in wordSet]
+  inWord = False
+  ind = 0
+  #put in one vertically
+  while ind < len(pzl):
+    i = pzl[ind]
+    posWordLen = 0
+    wordRegex = '^'
+    if i != '#':
+      while 0 <= (posWordLen*WIDTH+ind) < SIZE and pzl[posWordLen*WIDTH+ind] != '#':
+        if pzl[posWordLen*WIDTH+ind].isalpha():
+          wordRegex += pzl[posWordLen*WIDTH+ind]
+        else:
+          wordRegex += '\w'
+        posWordLen+=1
+      posWordLen=0
+      wordRegex+='$'
+      if wordRegex.find('\w') == -1:
+        ind+=1
+        continue
+      c = 0
+      word = ''
+      while c < len(seen):
+        word = seen[c]
+        if re.search(wordRegex, word, flags=re.M):
+          seen[c] = ''
+          break
+        c += 1
+      # print(word)
+      pzl = place(pzl, word, ind, 'V')
+      break #only want one vertical
+    ind += 1
+
+  #goes horizontally
+  ind = 0
+  while ind < len(pzl):
+    i = pzl[ind]
+    posWordLen = 0
+    wordRegex = '^'
+    if i != '#':
+      while (posWordLen+ind)//WIDTH == ind // WIDTH and pzl[posWordLen+ind] != '#': #can it even be an alpha?
+        if pzl[posWordLen+ind].isalpha():
+          wordRegex += pzl[posWordLen+ind]
+        else:
+          wordRegex += '\w'
+        posWordLen+=1
+      posWordLen = 0
+      wordRegex+='$'
+      if wordRegex.find('\w') == -1:
+        ind+=1
+        continue
+      c = 0
+      word = ''
+      while c < len(seen):
+        word = seen[c]
+        if re.search(wordRegex, word, flags=re.M):
+          seen[c] = ''
+          break
+        c+=1
+      # print(word)
+      pzl = place(pzl, word, ind, 'H')
+    ind+=1
+  return pzl
 
 # random choice
-def pickWord(spec):
+def findWordList(spec):
   length = len(spec)
-  if spec.count('-') == 0: #do i need in words for horizontal
-    return spec
-  word = random.choice(WORDS[length])
-  while not isValid(word, spec):
-    word = random.choice(WORDS[length])
-  return word
+  listOfSets = set()
+  setPosWords = set()
+  init = True
+  if spec.count('-') == length:
+    for i in LETTERS:
+      if i[0] == length:
+        setPosWords = setPosWords | LETTERS[i]
+  else:
+    for ct, i in enumerate(spec):
+      if i.isalpha():
+        if init:
+          setPosWords = LETTERS[(len(spec), i, ct)]
+          init = False
+        else: setPosWords = setPosWords & LETTERS[(len(spec), i, ct)]
+  return setPosWords
 
-def placeWord(pzl, word, ind):
+def placeWord1(pzl, word, ind):
   width = WIDTH+2
   newPzl = pzl
   for i in range(len(word)):
     index = ind+i
     newPzl = newPzl[:index] + word[i] + newPzl[index+1:]
-  printHASH(newPzl)
   return newPzl
+
+def placeWord(pzl, word, i):
+  pzlList = [ch for ch in pzl]
+  pzlList[i:i+len(word)] = word
+  return ''.join(pzlList)
 
 def addHashesToPzl(pzl):
   lst = ['' for i in range(HEIGHT)]
@@ -330,22 +413,112 @@ def transpose(pzl):
     nnewPzl += newPzl[cs::WIDTH][::-1]
   WIDTH, HEIGHT = HEIGHT, WIDTH
   nnewPzl = nnewPzl[::-1]
-  print('TRANSPOSE:')
-  printpzString(nnewPzl)
   return nnewPzl
 
-dctSeen = {}
-def fillWord(xW, wordSet):
-  ind = 0
-  width = WIDTH+2
-  pzl = addHashesToPzl(xW)
-  xW = takeOutHashes(pzl)
+def getStartPos(xW):
+  startPosH = set()
+  startPosV = set()
+  for ct, i in enumerate(xW):
+    if (i == '#' and ((ct+1 < len(xW)) and (xW[ct+1] == '-' or xW[ct+1].isalpha()))):
+      startPosH.add(ct+1)
+    if i == '#' and ct+WIDTH+2 < len(xW) and (xW[ct+WIDTH+2] == '-' or xW[ct+WIDTH+2].isalpha()):
+      startPosV.add(ct+WIDTH+2)
+    #edges
+    if ct in range(1, 1+WIDTH) and i != '#':
+      startPosV.add(ct)
+  return startPosH, startPosV
+
+global INTERCACHE
+INTERCACHE = {}
+def vertWork(xW):
+  for i in startPosV:
+    setIntersect = set()
+    setOfTup = set()
+    specLen = 0
+    while i+(WIDTH+2)*specLen<len(xW):
+      if xW[i+(WIDTH+2)*specLen].isalpha():
+        setOfTup.add((xW[i+(WIDTH+2)*specLen], specLen))
+      if xW[i+(WIDTH+2)*specLen] == '#':
+        break
+      specLen+=1
+    if setOfTup:
+      firstTup = setOfTup.pop()
+      if (specLen, firstTup[0], firstTup[1]) in LETTERS:
+        setIntersect = LETTERS[(specLen, firstTup[0], firstTup[1])]
+      else:
+        return False
+    while setOfTup:
+      pop = setOfTup.pop()
+      if (specLen, pop[0], pop[1]) in LETTERS:
+        setIntersect = setIntersect & LETTERS[(specLen, pop[0], pop[1])]
+        if not setIntersect:
+          return False
+      else: return False
+  return True
+
+def isInvalid(xW, seen):
+  trans = transpose(takeOutHashes(xW))
+  words = {trans[i*WIDTH:(i+1)*WIDTH] for i in range(WIDTH)}
+  if words & seen: return True
+  return False
+
+#deref to list
+def fillVert(xW):
+  for i in startPosV:
+    wordLen = 0
+    specSet = set()
+    intersect = set()
+    for j in range(i, len(xW), WIDTH+2):
+      if xW[j] == '#': break
+      wordLen += 1
+      if xW[j].isalpha(): specSet.add((xW[j], wordLen-1))
+    if specSet:
+      pop = specSet.pop()
+      intersect = LETTERS[(wordLen, pop[0], pop[1])]
+    for spec in specSet:
+      intersect = intersect & LETTERS[(wordLen, spec[0], spec[1])]
+    if intersect:
+      word = intersect.pop()
+      #vert place word
+      xWList = [*xW]
+      xWList[i:i + (WIDTH + 2) * len(word):WIDTH + 2] = word
+      xW = ''.join(xWList)
   return xW
+
+#word by word right now
+global prevLen
+prevLen = 1000
+def solvexWord(xW, startPosH, seen, oldPzl):
+  global prevLen
+  width = WIDTH+2
+  if not vertWork(xW): return False
+  if WIDTH==HEIGHT and isInvalid(xW, seen): return False
+  if (dashCount:=xW.count('-')) == 0: return xW
+  startPos = startPosH.pop()
+  wordLength = 0
+  for i in range(WIDTH):
+    if xW[startPos+i] == '#': break
+    wordLength += 1
+  posWords = findWordList(xW[startPos:startPos+wordLength])
+  for word in posWords:
+    if word in seen: continue
+    seen.add(word)
+    newPzl = placeWord(xW, word, startPos)
+    if newPzl:
+      solved = solvexWord(newPzl, {i for i in startPosH}, seen, xW)
+      if solved:
+        return solved
+      if dashCount < prevLen:
+        prevLen = dashCount
+        vert = fillVert(xW)
+        printpzString(takeOutHashes(vert))
+      seen.remove(word)
+  return False
 
 def main():
   start = time.process_time()
   #globals
-  global HEIGHT, WIDTH, SIZE, BLOCKING, BLOCKINGARG, NONBLOCKING, DIR, POSITION, PZL, SYMBOLSET, WORDS
+  global HEIGHT, WIDTH, SIZE, BLOCKING, BLOCKINGARG, NONBLOCKING, DIR, POSITION, PZL, LETTERS, SYMBOLSET, WORDS, NEWCACHE
   SYMBOLSET = '~`!@$%^&*()_+;:<>?,'
   HEIGHT = int(args[1][0:args[1].upper().find('X')])
   WIDTH = int(args[1][args[1].upper().find('X') + 1:])
@@ -383,11 +556,21 @@ def main():
       NONBLOCKING = NONBLOCKING - len(content) + c
       PZL[row] = PZL[row][0:col] + content + PZL[row][col + len(content):]
   WORDS = [list() for i in range(SIZE+10)]
+  LETTERS = {}
+  WORDSET = []
   with open(args[0]) as f:
     for line in f:
       word = line.strip()
-      if len(word) < 3 or re.search(r'^\d', word): continue
+      if len(word) < 3 or re.search(r'^(\w*\d\w*)*$', word): continue
       WORDS[len(word)].append(word.upper())
+      WORDSET.append(word.upper())
+  for wordSet in WORDS:
+    for word in wordSet:
+      for index,letter in enumerate(word):
+        tuples = (len(word), letter, index)
+        if tuples in LETTERS: LETTERS[tuples].add(word)
+        else: LETTERS[tuples] = {word}
+  NEWCACHE = {"NOTINLETTERS": 0}
 
   #xWords
   if BLOCKINGARG == SIZE: return printpz(['#'*WIDTH for i in range(HEIGHT)])
@@ -407,8 +590,16 @@ def main():
     xW = xW.replace('.', '-')
     xW = bruteForce(xW)
     printpzString(xW)
-    xW_Words = fillWord(xW, WORDS)
-    printpzString(xW_Words)
+    global roughDraft
+    roughDraft = fillWord(xW, WORDSET)
+    printpzString(roughDraft)
+    if SIZE < 225:
+      xW = addHashesToPzl(xW)
+      global startPosH, startPosV
+      startPosH, startPosV = getStartPos(xW)
+      xW_Words = solvexWord(xW, {i for i in startPosH}, set(), '')
+      xW_Words = takeOutHashes(xW_Words)
+      printpzString(xW_Words)
     print(f"Time: {(time.process_time() - start):.4g}s")
 
 if __name__ == '__main__':
