@@ -3,7 +3,7 @@ import math;
 import random
 import time;
 
-args = ['training.txt']
+# args = ['training.txt']
 
 def dotProduct(v1, v2): return sum(hadamardProduct(v1, v2))
 def hadamardProduct(v1, v2): return [v1[i] * v2[i] for i in range(len(v1))]
@@ -46,10 +46,10 @@ def backpropagation(xVal, t, weight): #err is the value of err(t-result)
   x = xVal[1:]
   # print('X', x)
   x = x[::-1]
-  k = 0.3
+  k = 1 #learning rate
   errors = [[*i] for i in x]
   weights = [[i for i in j] for j in weight]
-  weights = weights[::-1] #didn't make copies uh oh
+  weights = weights[::-1]
   # print('WEIGHTS', weights)
   for i in range(len(x)): #extra layer of errors
     # print('\nERR: ', errors)
@@ -61,7 +61,6 @@ def backpropagation(xVal, t, weight): #err is the value of err(t-result)
       errors[i][0] = (t - x[i][0]*weights[i][0])*weights[i][0]*deriv(x[i][0])
       continue
     for j in range(len(x[i])):
-      # print("x[i]tgyuhijmo: ", x[i])
       errors[i][j] = deriv(x[i][j]) * sum(weights[i-1][len(x[i])*k+j]*errors[i-1][k] for k in range(len(x[i-1])))
   partial = [[] for i in weights]
   weights = weights[::-1]
@@ -70,11 +69,13 @@ def backpropagation(xVal, t, weight): #err is the value of err(t-result)
   # print('\nERR: ', errors)
   for i in range(len(weights)):
     for j in range(len(weights[i])):
-      if i == len(weights)-1 and j == len(weights[i])-1: #change for test 11, ultimate layer partial calculation
-        partial[i].append((t-xVal[i][j]*weights[i][j])*xVal[i][j])
-        continue
+      # if i == len(weights)-1 and j == len(weights[i])-1: #change for test 11, ultimate layer partial calculation
+      #   partial[i].append((t-xVal[i][j]*weights[i][j])*xVal[i][j])
+      #   continue
       # print('x[i]', xVal[i])
       # print('partial', partial)
+      # print('x_layer_i', xVal[i][j//len(xVal[i])])
+      # print('E_j_layer+1', errors[i][j//len(xVal[i])])
       partial[i].append(xVal[i][j//len(xVal[i])] * errors[i][j//len(xVal[i])])
       # print('I MADE IT')
   return [[weights[i][j] + k*partial[i][j] for j in range(len(weights[i]))] for i in range(len(weights))]
@@ -100,36 +101,34 @@ def main():
   print('T', t_output)
   errLst = [10 for i in range(len(lst))]
   wSample = [[random.random()], [random.random() for i in range(2)],
-             [random.random() for i in range((len(lst[0])) * 2)]][::-1]
+             [random.random() for i in range((numInp+1) * 2)]][::-1]
   # wSample = [[0.3], [0.3 for i in range(2)],
   #            [0.3 for i in range((len(lst[0])) * 2)]][::-1]
-  for i in range(100000):
-    ran = random.randint(0, len(lst)-1)
-    inputs, output = lst[ran][:-1] + [1], t_output[ran][0]
-    y, x, result = feedforward(inputs, wSample)
-    # print()
-    # print('AFTER FIRST FEEDFORWARD------')
-    # print('X VAL: ', x)
-    # print('FINAL OUTPUT: ', result)
-    finalErr = error(output, result)
-    errLst[ran] = finalErr
-    x.append([result])
-    # print()
-    # print('BACKPROPAGATION-------')
-    newW = backpropagation(x, output, wSample)
-    # print('NEW WEIGHTS', newW)
-    newy, newx, newResult = feedforward(inputs, newW)
-    # print('FINAL OUTPUT', newResult)
-    finalErr = error(output, newResult)
-    errLst[ran] = finalErr
-    newTotErr = sum(errLst)
-    wSample = newW
-    if random.random() > 0.999: print(f"RUN #{i}, actual: {newResult}, expect: {output}")
-  print('\nFINAL---------\nbestRun:', bestRun)
-  print('FINAL error:', newTotErr)
-  print(f"Layer counts [{numInp+1}, 2, 1, 1]")
-  for l in newW:
-    print(l)
+  count = 0
+  while True:
+    count+= 1
+    for i in range(len(lst)):
+      ran = i
+      inputs, output = lst[ran][:-1] + [1], t_output[ran][0]
+      y, x, result = feedforward(inputs, wSample)
+      # print()
+      # print('AFTER FIRST FEEDFORWARD------')
+      # print('WEIGHTS', wSample)
+      # print('X VAL: ', x)
+      # print('FINAL OUTPUT: ', result)
+      x.append([result])
+      # print()
+      # print('BACKPROPAGATION-------')
+      newW = backpropagation(x, output, wSample)
+      # print('NEW WEIGHTS', newW)
+      wSample = newW
+      if count % 10000 == 0:
+        print('\nFINAL---------')
+        print(f"RUN #{count}, actual: {result}, expect: {output}")
+        print(f"Layer counts [{numInp + 1}, 2, 1, 1]")
+        for l in newW:
+          print(l)
+
 
 if __name__ == '__main__':
   main()
