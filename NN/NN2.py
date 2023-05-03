@@ -42,30 +42,41 @@ def error(t, y):
   return .5 * (t - y) ** 2
 def deriv(x): return x*(1-x)
 
-def backpropagation(x, t, weight): #err is the value of err(t-result)
+def backpropagation(xVal, t, weight): #err is the value of err(t-result)
+  x = xVal[1:]
+  # print('X', x)
   x = x[::-1]
   k = 0.3
-  errors = [[*i] for i in x][1:]
+  errors = [[*i] for i in x]
   weights = [[i for i in j] for j in weight]
   weights = weights[::-1] #didn't make copies uh oh
-  for i in range(1,len(x)-1): #extra layer of errors
+  # print('WEIGHTS', weights)
+  for i in range(len(x)): #extra layer of errors
+    # print('\nERR: ', errors)
+    if i == 0:
+      # print("input: ", t-x[i][0])
+      errors[i][0] = (t - x[i][0])
+      continue
     if i == 1: #change for test 11
       errors[i][0] = (t - x[i][0]*weights[i][0])*weights[i][0]*deriv(x[i][0])
       continue
     for j in range(len(x[i])):
+      # print("x[i]tgyuhijmo: ", x[i])
       errors[i][j] = deriv(x[i][j]) * sum(weights[i-1][len(x[i])*k+j]*errors[i-1][k] for k in range(len(x[i-1])))
   partial = [[] for i in weights]
   weights = weights[::-1]
-  partial = partial[::-1]
   x = x[::-1]
   errors = errors[::-1]
+  # print('\nERR: ', errors)
   for i in range(len(weights)):
     for j in range(len(weights[i])):
       if i == len(weights)-1 and j == len(weights[i])-1: #change for test 11, ultimate layer partial calculation
-        partial[i].append((t-x[i][j]*weights[i][j])*x[i][j])
+        partial[i].append((t-xVal[i][j]*weights[i][j])*xVal[i][j])
         continue
-      partial[i].append(x[i][j//len(x[i])] * errors[i+1][j//len(x[i])])
-  print('\nERR: ', errors)
+      # print('x[i]', xVal[i])
+      # print('partial', partial)
+      partial[i].append(xVal[i][j//len(xVal[i])] * errors[i][j//len(xVal[i])])
+      # print('I MADE IT')
   return [[weights[i][j] + k*partial[i][j] for j in range(len(weights[i]))] for i in range(len(weights))]
 
 def main():
@@ -88,31 +99,32 @@ def main():
   t_output = [i[-1:-(len(lst[0])-numInp)-1:-1] for i in lst]
   print('T', t_output)
   errLst = [10 for i in range(len(lst))]
-  for i in range(1):
-    # wSample = [[random.random()], [random.random() for i in range(2)],
-    #            [random.random() for i in range((len(lst[0])) * 2)]][::-1]
-    wSample = [[0.3], [0.3 for i in range(2)],
-               [0.3 for i in range((len(lst[0])) * 2)]][::-1]
+  wSample = [[random.random()], [random.random() for i in range(2)],
+             [random.random() for i in range((len(lst[0])) * 2)]][::-1]
+  # wSample = [[0.3], [0.3 for i in range(2)],
+  #            [0.3 for i in range((len(lst[0])) * 2)]][::-1]
+  for i in range(100000):
     ran = random.randint(0, len(lst)-1)
     inputs, output = lst[ran][:-1] + [1], t_output[ran][0]
     y, x, result = feedforward(inputs, wSample)
-    print()
-    print('AFTER FIRST FEEDFORWARD------')
-    print('X VAL: ', x)
-    print('FINAL OUTPUT: ', result)
+    # print()
+    # print('AFTER FIRST FEEDFORWARD------')
+    # print('X VAL: ', x)
+    # print('FINAL OUTPUT: ', result)
     finalErr = error(output, result)
     errLst[ran] = finalErr
     x.append([result])
-    print()
-    print('BACKPROPAGATION-------')
+    # print()
+    # print('BACKPROPAGATION-------')
     newW = backpropagation(x, output, wSample)
-    print('NEW WEIGHTS', newW)
+    # print('NEW WEIGHTS', newW)
     newy, newx, newResult = feedforward(inputs, newW)
-    print('FINAL OUTPUT', newResult)
+    # print('FINAL OUTPUT', newResult)
     finalErr = error(output, newResult)
     errLst[ran] = finalErr
     newTotErr = sum(errLst)
-    print(f"RUN #{i}, error: {errLst}")
+    wSample = newW
+    if random.random() > 0.999: print(f"RUN #{i}, actual: {newResult}, expect: {output}")
   print('\nFINAL---------\nbestRun:', bestRun)
   print('FINAL error:', newTotErr)
   print(f"Layer counts [{numInp+1}, 2, 1, 1]")
@@ -125,4 +137,5 @@ if __name__ == '__main__':
 #feed forward then back prop
 # (1+ # of inputs) 2 1 1 NUM OF NODES per LAYER
 # 2(1+# of inputs), 2, 1 NUM OF WEIGHTS
+#add extra transfer node for 11 4322
 # Evelyn Li, pd 7, 2024
