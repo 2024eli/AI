@@ -2,7 +2,7 @@
 
 import sys; args = sys.argv[1:]
 
-args =[1, '01', 'BA', 'training.txt']
+args =[2, '0110', 'BCAD', 'training.txt']
 # args order: # of inputs, compacted outputs, file order, filename to write
 # for example: 3 11010011 EACBFDHG training.txt
 def main():

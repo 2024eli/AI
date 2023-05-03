@@ -58,7 +58,7 @@ def backpropagation(xVal, t, weight): #err is the value of err(t-result)
       errors[i][0] = (t - x[i][0])
       continue
     if i == 1: #change for test 11
-      errors[i][0] = (t - x[i][0]*weights[i][0])*weights[i][0]*deriv(x[i][0])
+      errors[i][0] = (t - x[i][0]*weights[i-1][0])*weights[i-1][0]*deriv(x[i][0])
       continue
     for j in range(len(x[i])):
       errors[i][j] = deriv(x[i][j]) * sum(weights[i-1][len(x[i])*k+j]*errors[i-1][k] for k in range(len(x[i-1])))
@@ -99,11 +99,11 @@ def main():
   print(lst)
   t_output = [i[-1:-(len(lst[0])-numInp)-1:-1] for i in lst]
   print('T', t_output)
-  errLst = [10 for i in range(len(lst))]
-  wSample = [[random.random()], [random.random() for i in range(2)],
-             [random.random() for i in range((numInp+1) * 2)]][::-1]
-  # wSample = [[0.3], [0.3 for i in range(2)],
-  #            [0.3 for i in range((len(lst[0])) * 2)]][::-1]
+  # errLst = [10 for i in range(len(lst))]
+  # wSample = [[random.uniform(-1, 1)], [random.uniform(-1, 1) for i in range(2)],
+  #            [random.uniform(-1, 1) for i in range((numInp+1) * 2)]][::-1]
+  wSample = [[0.3], [0.3 for i in range(2)],
+             [0.3 for i in range((len(lst[0])) * 2)]][::-1]
   count = 0
   while True:
     count+= 1
