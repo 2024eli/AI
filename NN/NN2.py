@@ -31,6 +31,7 @@ def feedforward(inputs, weights):
     x.append(xVal)
     y.append(yVal)
   final = weights[-1]
+  # print(inputs, weights, final, xVal)
   finalOut = [xVal[i]*final[i] for i in range(len(xVal))]
   y.append(finalOut)
   return y, x, finalOut[0]
@@ -44,9 +45,8 @@ def deriv(x): return x*(1-x)
 
 def backpropagation(xVal, t, weight): #err is the value of err(t-result)
   x = xVal[1:]
-  # print('X', x)
   x = x[::-1]
-  k = 1 #learning rate
+  k = 0.2 #learning rate
   errors = [[*i] for i in x]
   weights = [[i for i in j] for j in weight]
   weights = weights[::-1]
@@ -58,7 +58,7 @@ def backpropagation(xVal, t, weight): #err is the value of err(t-result)
       errors[i][0] = (t - x[i][0])
       continue
     if i == 1: #change for test 11
-      errors[i][0] = (t - x[i][0]*weights[i-1][0])*weights[i-1][0]*deriv(x[i][0])
+      errors[i][0] = (errors[0][0])*weights[i-1][0]*deriv(x[i][0])
       continue
     for j in range(len(x[i])):
       errors[i][j] = deriv(x[i][j]) * sum(weights[i-1][len(x[i])*k+j]*errors[i-1][k] for k in range(len(x[i-1])))
@@ -69,15 +69,13 @@ def backpropagation(xVal, t, weight): #err is the value of err(t-result)
   # print('\nERR: ', errors)
   for i in range(len(weights)):
     for j in range(len(weights[i])):
-      # if i == len(weights)-1 and j == len(weights[i])-1: #change for test 11, ultimate layer partial calculation
-      #   partial[i].append((t-xVal[i][j]*weights[i][j])*xVal[i][j])
-      #   continue
       # print('x[i]', xVal[i])
-      # print('partial', partial)
       # print('x_layer_i', xVal[i][j//len(xVal[i])])
       # print('E_j_layer+1', errors[i][j//len(xVal[i])])
-      partial[i].append(xVal[i][j//len(xVal[i])] * errors[i][j//len(xVal[i])])
+      # print('partial', partial)
+      partial[i].append(xVal[i][j%len(xVal[i])] * errors[i][j//len(xVal[i])])
       # print('I MADE IT')
+  # print('\npartial', partial)
   return [[weights[i][j] + k*partial[i][j] for j in range(len(weights[i]))] for i in range(len(weights))]
 
 def main():
@@ -96,22 +94,18 @@ def main():
       i = [j.strip() for j in i]
       lst.append([float(j) for j in i[0].split(' ')])
       lst[-1] += [float(j) for j in i[1].split(' ')]
-  print(lst)
   t_output = [i[-1:-(len(lst[0])-numInp)-1:-1] for i in lst]
-  print('T', t_output)
-  # errLst = [10 for i in range(len(lst))]
-  # wSample = [[random.uniform(-1, 1)], [random.uniform(-1, 1) for i in range(2)],
-  #            [random.uniform(-1, 1) for i in range((numInp+1) * 2)]][::-1]
-  wSample = [[0.3], [0.3 for i in range(2)],
-             [0.3 for i in range((len(lst[0])) * 2)]][::-1]
+  wSample = [[random.uniform(-1, 1)], [random.uniform(-1, 1) for i in range(2)],
+             [random.uniform(-1, 1) for i in range((numInp+1) * 2)]][::-1]
+  # wSample = [[0.3], [0.3 for i in range(2)],
+  #            [0.3 for i in range((len(lst[0])) * 2)]][::-1]
   count = 0
   while True:
     count+= 1
     for i in range(len(lst)):
-      ran = i
-      inputs, output = lst[ran][:-1] + [1], t_output[ran][0]
+      # print('**************************************')
+      inputs, output = lst[i][:-1] + [1], t_output[i][0] #t is expected output
       y, x, result = feedforward(inputs, wSample)
-      # print()
       # print('AFTER FIRST FEEDFORWARD------')
       # print('WEIGHTS', wSample)
       # print('X VAL: ', x)
@@ -120,9 +114,9 @@ def main():
       # print()
       # print('BACKPROPAGATION-------')
       newW = backpropagation(x, output, wSample)
-      # print('NEW WEIGHTS', newW)
-      wSample = newW
-      if count % 10000 == 0:
+      # print('\nNEW WEIGHTS', newW)
+      wSample = [[w for w in weight] for weight in newW]
+      if count % 1000 == 0:
         print('\nFINAL---------')
         print(f"RUN #{count}, actual: {result}, expect: {output}")
         print(f"Layer counts [{numInp + 1}, 2, 1, 1]")
@@ -136,5 +130,4 @@ if __name__ == '__main__':
 #feed forward then back prop
 # (1+ # of inputs) 2 1 1 NUM OF NODES per LAYER
 # 2(1+# of inputs), 2, 1 NUM OF WEIGHTS
-#add extra transfer node for 11 4322
 # Evelyn Li, pd 7, 2024
