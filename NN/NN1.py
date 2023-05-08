@@ -2,7 +2,6 @@ import sys;args = sys.argv[1:]
 import math;
 import random
 import time;
-args = ['weights1.txt', 'T3', '5','2','3']
 
 def dotProduct(v1, v2): return sum(hadamardProduct(v1, v2))
 
@@ -30,61 +29,30 @@ def transfer(input):
   if funcName == 'T4': return t4(input)
 
 #main
-# def nextNodes(input, layer):
-#   #find next num of nodes
-#   next = []
-#   for i in range(len(layer)//len(input)):
-#     next += [layer[i*len(input):(i+1)*len(input)]]
-#   nextVal = []
-#   for i in next:
-#     nextVal.append(transfer(dotProduct(input, i)))
-#   return nextVal
-#
-# def feedforward(inputs, weights):
-#   nodes = []
-#   inp = inputs
-#   for layer in weights[:-1]:
-#     nodes.append(inp)
-#     inp = nextNodes(inp, layer)
-#   final = weights[-1]
-#   finalOut = [inp[i]*final[i] for i in range(len(inp))]
-#   nodes.append(finalOut)
-#   print(inp)
-#   #only want to return outputs
-#   print("whole list of nodes: ", end='')
-#   print(nodes)
-#   return finalOut
-
-def nextNodes(inputs, layer):
+def nextNodes(input, layer):
   #find next num of nodes
   next = []
-  for i in range(len(layer)//len(inputs)):
-    next += [layer[i*len(inputs):(i+1)*len(inputs)]]
+  for i in range(len(layer)//len(input)):
+    next += [layer[i*len(input):(i+1)*len(input)]]
   nextVal = []
-  y = []
-  for w in next:
-    s = dotProduct(inputs, w)
-    y.append(s)
-    nextVal.append(transfer(s))
-  print('nextNodes', nextVal, y)
-  print('weights', layer)
-  return nextVal, y
+  for i in next:
+    nextVal.append(transfer(dotProduct(input, i)))
+  return nextVal
 
 def feedforward(inputs, weights):
-  y = []
-  x = []
-  xVal = inputs
-  x.append(xVal)
+  nodes = []
+  inp = inputs
   for layer in weights[:-1]:
-    xVal, yVal = nextNodes(xVal, layer)
-    x.append(xVal)
-    y.append(yVal)
-  y.append(yVal)
+    nodes.append(inp)
+    inp = nextNodes(inp, layer)
   final = weights[-1]
-  finalOut = [xVal[i]*final[i] for i in range(len(xVal))]
-  y.append(finalOut)
-  print('NODES', y, x, finalOut)
-  return y, x, finalOut
+  finalOut = [inp[i]*final[i] for i in range(len(inp))]
+  nodes.append(finalOut)
+  print(inp)
+  #only want to return outputs
+  print("whole list of nodes: ", end='')
+  print(nodes)
+  return finalOut
 
 def main():
   global weights, funcName, inputs, nodes # weights list of list
@@ -92,10 +60,8 @@ def main():
     weights = [[float(i) for i in line.split(' ')] for line in f]
   funcName = args[1]
   inputs = [float(i) for i in args[2:]]
-  y, x, finalOuts = feedforward(inputs, weights)
+  finalOuts = feedforward(inputs, weights)
   print()
-  print(y)
-  print(x)
   print(finalOuts)
   print()
   for i in finalOuts:
