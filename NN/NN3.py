@@ -31,32 +31,30 @@ def feedforward(inputs, weights):
     x.append(xVal)
     y.append(yVal)
   final = weights[-1]
+  # print(inputs, weights, final, xVal)
   finalOut = [xVal[i]*final[i] for i in range(len(xVal))]
   y.append(finalOut)
-  return y, x, finalOut
+  return y, x, finalOut[0]
+
+def avg(lst):
+  return sum(lst)/len(lst)
 
 def error(t, y):
   return .5 * (t - y) ** 2
 def deriv(x): return x*(1-x)
 
-def backpropagation(xVal, t, weight): #err is the value of err(t-result)
+def backpropagation(xVal, t, weight, k): #err is the value of err(t-result)
   x = xVal[1:]
   x = x[::-1]
-  k = 0.2 #learning rate
   errors = [[*i] for i in x]
   weights = [[i for i in j] for j in weight]
   weights = weights[::-1]
-  # print('WEIGHTS', weights)
   for i in range(len(x)): #extra layer of errors
-    # print('\nERR: ', errors)
     if i == 0:
-      for j in range(len(t)):
-        # print("input: ", t[j])
-        errors[i][j] = (t[j] - x[i][j])
+      errors[i][0] = (t - x[i][0])
       continue
     if i == 1: #change for test 11
-      for j in range(len(t)):
-        errors[i][j] = (errors[0][j])*weights[i-1][j]*deriv(x[i][j])
+      errors[i][0] = (errors[0][0])*weights[i-1][0]*deriv(x[i][0])
       continue
     for j in range(len(x[i])):
       errors[i][j] = deriv(x[i][j]) * sum(weights[i-1][len(x[i])*k+j]*errors[i-1][k] for k in range(len(x[i-1])))
@@ -64,75 +62,54 @@ def backpropagation(xVal, t, weight): #err is the value of err(t-result)
   weights = weights[::-1]
   x = x[::-1]
   errors = errors[::-1]
-  # print('\nERR: ', errors)
   for i in range(len(weights)):
     for j in range(len(weights[i])):
-      # print('   x[i]', xVal[i])
-      # print('   x_layer_i', xVal[i][j//len(xVal[i])])
-      # print('   E_j_layer+1', errors[i][j//len(xVal[i])])
-      # print('partial', partial)
       partial[i].append(xVal[i][j%len(xVal[i])] * errors[i][j//len(xVal[i])])
-      # print('I MADE IT')
-  # print('\npartial', partial)
   return [[weights[i][j] + k*partial[i][j] for j in range(len(weights[i]))] for i in range(len(weights))]
 
 def main():
   global weights, nodes, t_output, errLst, wSample # weights list of list
   weights = []
-  lst = []
-  numInp = 0
-  bestRun = 0
-  minErr = 1
-  minW = []
-  with open(args[0]) as f:
-    for line in f:
-      print(line)
-      i = line.split(' => ')
-      numInp = len(i[0].split(' '))
-      i = [j.strip() for j in i]
-      lst.append([float(j) for j in i[0].split(' ')])
-      lst[-1] += [float(j) for j in i[1].split(' ')]
-  t_output = [i[-1:-(len(lst[0])-numInp)-1:-1][::-1] for i in lst]
-  if (nodes:=len(t_output[0])) == 1:
-    wSample = [[random.uniform(-1, 1)], [random.uniform(-1, 1) for i in range(2)],
-               [random.uniform(-1, 1) for i in range((numInp+1) * 2)]][::-1]
-    # wSample = [[0.3], [0.3 for i in range(2)],
-    #            [0.3 for i in range((len(lst[0])) * 2)]][::-1]
-  else:
-    wSample = [[random.uniform(-1, 1) for i in range(nodes)], [random.uniform(-1, 1) for i in range(6)],
-               [random.uniform(-1, 1) for i in range((numInp + 1) * 3)]][::-1]
-    # wSample = [[0.3 for i in range(nodes)], [0.3 for i in range(6)],
-    #            [0.3 for i in range((numInp + 1) * 3)]][::-1]
+  numInput = 2
+  #args--------------
+  argStr = args[0].replace('=', '')
+  inequalityInd = argStr.find('<') if argStr.find('>') == -1 else argStr.find('>')
+  inequality = argStr[inequalityInd]
+  limit = float(argStr[inequalityInd+1:])
+  #------------------
+  wSample = [[random.uniform(-1, 1) for i in range(15)],
+             [random.uniform(-1, 1) for i in range(15)],
+             [random.uniform(-1, 1) for i in range(3)],
+             [random.uniform(-1, 1) for i in range(1)]]
   count = 0
+  t = 0
+  k = 0.3
   while True:
     count+= 1
-    for i in range(len(lst)):
-      # print('**************************************')
-      inputs, output = lst[i][:-(len(lst[0])-numInp)] + [1], t_output[i] #t is expected output
-      y, x, result = feedforward(inputs, wSample)
-      # print('AFTER FIRST FEEDFORWARD------')
-      # print('WEIGHTS', wSample)
-      # print('X VAL: ', x)
-      # print('FINAL OUTPUT: ', result)
-      x.append(result)
-      # print()
-      # print('BACKPROPAGATION-------')
-      newW = backpropagation(x, output, wSample)
-      # print('\nNEW WEIGHTS', newW)
-      wSample = [[w for w in weight] for weight in newW]
-      if count % 5000 == 0:
-        print('\nFINAL---------')
-        print(f"RUN #{count}, actual: {result}, expect: {output}")
-        if nodes == 1: print(f"Layer counts [{numInp + 1}, 2, 1, 1]")
-        else: print('Layer counts 4, 3, 2, 2')
-        for l in newW:
-          print(l)
+    # print('**************************************')
+    xVal = random.uniform(-1.5, 1.5)
+    yVal = random.uniform(-1.5, 1.5)
+    if inequality == '<':
+      t = 1 if xVal**2+yVal**2 < limit else 0
+    if inequality == '>':
+      t = 1 if xVal ** 2 + yVal ** 2 > limit else 0
+    y, x, result = feedforward([xVal, yVal, 1], wSample)
+    x.append([result])
+    newW = backpropagation(x, t, wSample, k)
+    wSample = [[w for w in weight] for weight in newW]
+    if count % 5000 == 0:
+      print('\nFINAL---------')
+      print(f"RUN #{count}, actual: {result}, expect: {t}")
+      print(f"Error: {0.5 * (result - t) ** 2}")
+      print(f"Layer counts [3, 5, 3, 1, 1]")
+      for l in newW:
+        print(l)
+      k = k*0.975
 
 
 if __name__ == '__main__':
   main()
 
 #feed forward then back prop
-# (1+ # of inputs) 2 1 1 NUM OF NODES per LAYER
-# 2(1+# of inputs), 2, 1 NUM OF WEIGHTS
+#things to change: transfer function, output, etc
 # Evelyn Li, pd 7, 2024

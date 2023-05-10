@@ -67,11 +67,15 @@ def backpropagation(xVal, t, weight): #err is the value of err(t-result)
   # print('\nERR: ', errors)
   for i in range(len(weights)):
     for j in range(len(weights[i])):
-      # print('   x[i]', xVal[i])
-      # print('   x_layer_i', xVal[i][j//len(xVal[i])])
-      # print('   E_j_layer+1', errors[i][j//len(xVal[i])])
+      # print('   x[i]', xVal[i], i, j)
+      # print('   weights[i] and [j]', weights[i], weights[i][j])
+      # print('   x_layer_i', xVal[i][j%len(xVal[i])])
+      # print('   E_j_layer+1,', j, '//', len(xVal[i]), 'index to', errors[i][j//len(xVal[i])])
       # print('partial', partial)
-      partial[i].append(xVal[i][j%len(xVal[i])] * errors[i][j//len(xVal[i])])
+      if i + 1 == len(weights): #if last layer
+        partial[i].append(xVal[i][j % len(xVal[i])] * errors[i][j])
+      else:
+        partial[i].append(xVal[i][j%len(xVal[i])] * errors[i][j//len(xVal[i])])
       # print('I MADE IT')
   # print('\npartial', partial)
   return [[weights[i][j] + k*partial[i][j] for j in range(len(weights[i]))] for i in range(len(weights))]
@@ -86,12 +90,15 @@ def main():
   minW = []
   with open(args[0]) as f:
     for line in f:
-      print(line)
+      # print(line)
       i = line.split(' => ')
       numInp = len(i[0].split(' '))
       i = [j.strip() for j in i]
       lst.append([float(j) for j in i[0].split(' ')])
       lst[-1] += [float(j) for j in i[1].split(' ')]
+  #take this testing line out
+  # lst = [[0.75, 0.5, 1]]
+  # numInp = 1
   t_output = [i[-1:-(len(lst[0])-numInp)-1:-1][::-1] for i in lst]
   if (nodes:=len(t_output[0])) == 1:
     wSample = [[random.uniform(-1, 1)], [random.uniform(-1, 1) for i in range(2)],
@@ -103,6 +110,7 @@ def main():
                [random.uniform(-1, 1) for i in range((numInp + 1) * 3)]][::-1]
     # wSample = [[0.3 for i in range(nodes)], [0.3 for i in range(6)],
     #            [0.3 for i in range((numInp + 1) * 3)]][::-1]
+    # wSample = [[4, -3, -6, 5], [1.1, 1.2, -1.3, -1.4, 1.5, 1.6], [0.1, -0.2, 0.3, 0.4, 0.5, -0.6], [1, -2]]
   count = 0
   while True:
     count+= 1
@@ -120,7 +128,7 @@ def main():
       newW = backpropagation(x, output, wSample)
       # print('\nNEW WEIGHTS', newW)
       wSample = [[w for w in weight] for weight in newW]
-      if count % 5000 == 0:
+      if count % 3000 == 0:
         print('\nFINAL---------')
         print(f"RUN #{count}, actual: {result}, expect: {output}")
         if nodes == 1: print(f"Layer counts [{numInp + 1}, 2, 1, 1]")
