@@ -48,8 +48,10 @@ def backpropagation(xVal, t, weight): #err is the value of err(t-result)
   weights = weights[::-1]
   # print('WEIGHTS', weights)
   for i in range(len(x)): #extra layer of errors
+    # print('\nERR: ', errors)
     if i == 0:
       for j in range(len(t)):
+        # print("input: ", t[j])
         errors[i][j] = (t[j] - x[i][j])
       continue
     if i == 1: #change for test 11
@@ -62,12 +64,20 @@ def backpropagation(xVal, t, weight): #err is the value of err(t-result)
   weights = weights[::-1]
   x = x[::-1]
   errors = errors[::-1]
+  # print('\nERR: ', errors)
   for i in range(len(weights)):
     for j in range(len(weights[i])):
+      # print('   x[i]', xVal[i], i, j)
+      # print('   weights[i] and [j]', weights[i], weights[i][j])
+      # print('   x_layer_i', xVal[i][j%len(xVal[i])])
+      # print('   E_j_layer+1,', j, '//', len(xVal[i]), 'index to', errors[i][j//len(xVal[i])])
+      # print('partial', partial)
       if i + 1 == len(weights): #if last layer
         partial[i].append(xVal[i][j % len(xVal[i])] * errors[i][j])
       else:
         partial[i].append(xVal[i][j%len(xVal[i])] * errors[i][j//len(xVal[i])])
+      # print('I MADE IT')
+  # print('\npartial', partial)
   return [[weights[i][j] + k*partial[i][j] for j in range(len(weights[i]))] for i in range(len(weights))]
 
 def main():
@@ -86,23 +96,37 @@ def main():
       i = [j.strip() for j in i]
       lst.append([float(j) for j in i[0].split(' ')])
       lst[-1] += [float(j) for j in i[1].split(' ')]
+  #take this testing line out
   t_output = [i[-1:-(len(lst[0])-numInp)-1:-1][::-1] for i in lst]
   if (nodes:=len(t_output[0])) == 1:
     wSample = [[random.uniform(-1, 1)], [random.uniform(-1, 1) for i in range(2)],
                [random.uniform(-1, 1) for i in range((numInp+1) * 2)]][::-1]
+    # wSample = [[0.3], [0.3 for i in range(2)],
+    #            [0.3 for i in range((len(lst[0])) * 2)]][::-1]
   else:
-    wSample = [[random.uniform(-1, 1) for i in range(nodes)], [random.uniform(-1, 1) for i in range(6)],
+    wSample = [[random.uniform(-1, 1) for i in range(nodes)], [random.uniform(-1, 1) for i in range(3*nodes)],
                [random.uniform(-1, 1) for i in range((numInp + 1) * 3)]][::-1]
+    # wSample = [[0.3 for i in range(nodes)], [0.3 for i in range(6)],
+    #            [0.3 for i in range((numInp + 1) * 3)]][::-1]
+    # wSample = [[4, -3, -6, 5], [1.1, 1.2, -1.3, -1.4, 1.5, 1.6], [0.1, -0.2, 0.3, 0.4, 0.5, -0.6], [1, -2]]
   count = 0
   while True:
     count+= 1
     for i in range(len(lst)):
+      # print('**************************************')
       inputs, output = lst[i][:-(len(lst[0])-numInp)] + [1], t_output[i] #t is expected output
       y, x, result = feedforward(inputs, wSample)
+      # print('AFTER FIRST FEEDFORWARD------')
+      # print('WEIGHTS', wSample)
+      # print('X VAL: ', x)
+      # print('FINAL OUTPUT: ', result)
       x.append(result)
+      # print()
+      # print('BACKPROPAGATION-------')
       newW = backpropagation(x, output, wSample)
+      # print('\nNEW WEIGHTS', newW)
       wSample = [[w for w in weight] for weight in newW]
-      if count % 3000 == 0:
+      if count % 2000 == 0:
         print('\nFINAL---------')
         print(f"RUN #{count}, actual: {result}, expect: {output}")
         if nodes == 1: print(f"Layer counts [{numInp + 1}, 2, 1, 1]")
