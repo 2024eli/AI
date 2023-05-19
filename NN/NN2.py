@@ -3,7 +3,7 @@ import math;
 import random
 import time;
 
-args = ['training.txt']
+# args = ['training.txt']
 
 def dotProduct(v1, v2): return sum(hadamardProduct(v1, v2))
 def hadamardProduct(v1, v2): return [v1[i] * v2[i] for i in range(len(v1))]
@@ -33,39 +33,51 @@ def feedforward(inputs, weights):
   final = weights[-1]
   finalOut = [xVal[i]*final[i] for i in range(len(xVal))]
   y.append(finalOut)
-  return y, x, finalOut[0]
-
-def avg(lst):
-  return sum(lst)/len(lst)
+  return y, x, finalOut
 
 def error(t, y):
   return .5 * (t - y) ** 2
 def deriv(x): return x*(1-x)
 
-def backpropagation(x, t, weight): #err is the value of err(t-result)
+def backpropagation(xVal, t, weight): #err is the value of err(t-result)
+  x = xVal[1:]
   x = x[::-1]
-  k = 0.3
-  errors = [[*i] for i in x][1:]
+  k = 0.2 #learning rate
+  errors = [[*i] for i in x]
   weights = [[i for i in j] for j in weight]
-  weights = weights[::-1] #didn't make copies uh oh
-  for i in range(1,len(x)-1): #extra layer of errors
+  weights = weights[::-1]
+  # print('WEIGHTS', weights)
+  for i in range(len(x)): #extra layer of errors
+    # print('\nERR: ', errors)
+    if i == 0:
+      for j in range(len(t)):
+        # print("input: ", t[j])
+        errors[i][j] = (t[j] - x[i][j])
+      continue
     if i == 1: #change for test 11
-      errors[i][0] = (t - x[i][0]*weights[i][0])*weights[i][0]*deriv(x[i][0])
+      for j in range(len(t)):
+        errors[i][j] = (errors[0][j])*weights[i-1][j]*deriv(x[i][j])
       continue
     for j in range(len(x[i])):
       errors[i][j] = deriv(x[i][j]) * sum(weights[i-1][len(x[i])*k+j]*errors[i-1][k] for k in range(len(x[i-1])))
   partial = [[] for i in weights]
   weights = weights[::-1]
-  partial = partial[::-1]
   x = x[::-1]
   errors = errors[::-1]
+  # print('\nERR: ', errors)
   for i in range(len(weights)):
     for j in range(len(weights[i])):
-      if i == len(weights)-1 and j == len(weights[i])-1: #change for test 11, ultimate layer partial calculation
-        partial[i].append((t-x[i][j]*weights[i][j])*x[i][j])
-        continue
-      partial[i].append(x[i][j//len(x[i])] * errors[i+1][j//len(x[i])])
-  print('\nERR: ', errors)
+      # print('   x[i]', xVal[i], i, j)
+      # print('   weights[i] and [j]', weights[i], weights[i][j])
+      # print('   x_layer_i', xVal[i][j%len(xVal[i])])
+      # print('   E_j_layer+1,', j, '//', len(xVal[i]), 'index to', errors[i][j//len(xVal[i])])
+      # print('partial', partial)
+      if i + 1 == len(weights): #if last layer
+        partial[i].append(xVal[i][j % len(xVal[i])] * errors[i][j])
+      else:
+        partial[i].append(xVal[i][j%len(xVal[i])] * errors[i][j//len(xVal[i])])
+      # print('I MADE IT')
+  # print('\npartial', partial)
   return [[weights[i][j] + k*partial[i][j] for j in range(len(weights[i]))] for i in range(len(weights))]
 
 def main():
@@ -78,46 +90,50 @@ def main():
   minW = []
   with open(args[0]) as f:
     for line in f:
-      print(line)
+      # print(line)
       i = line.split(' => ')
       numInp = len(i[0].split(' '))
       i = [j.strip() for j in i]
       lst.append([float(j) for j in i[0].split(' ')])
       lst[-1] += [float(j) for j in i[1].split(' ')]
-  print(lst)
-  t_output = [i[-1:-(len(lst[0])-numInp)-1:-1] for i in lst]
-  print('T', t_output)
-  errLst = [10 for i in range(len(lst))]
-  for i in range(1):
-    # wSample = [[random.random()], [random.random() for i in range(2)],
-    #            [random.random() for i in range((len(lst[0])) * 2)]][::-1]
-    wSample = [[0.3], [0.3 for i in range(2)],
-               [0.3 for i in range((len(lst[0])) * 2)]][::-1]
-    ran = random.randint(0, len(lst)-1)
-    inputs, output = lst[ran][:-1] + [1], t_output[ran][0]
-    y, x, result = feedforward(inputs, wSample)
-    print()
-    print('AFTER FIRST FEEDFORWARD------')
-    print('X VAL: ', x)
-    print('FINAL OUTPUT: ', result)
-    finalErr = error(output, result)
-    errLst[ran] = finalErr
-    x.append([result])
-    print()
-    print('BACKPROPAGATION-------')
-    newW = backpropagation(x, output, wSample)
-    print('NEW WEIGHTS', newW)
-    newy, newx, newResult = feedforward(inputs, newW)
-    print('FINAL OUTPUT', newResult)
-    finalErr = error(output, newResult)
-    errLst[ran] = finalErr
-    newTotErr = sum(errLst)
-    print(f"RUN #{i}, error: {errLst}")
-  print('\nFINAL---------\nbestRun:', bestRun)
-  print('FINAL error:', newTotErr)
-  print(f"Layer counts [{numInp+1}, 2, 1, 1]")
-  for l in newW:
-    print(l)
+  #take this testing line out
+  t_output = [i[-1:-(len(lst[0])-numInp)-1:-1][::-1] for i in lst]
+  if (nodes:=len(t_output[0])) == 1:
+    wSample = [[random.uniform(-1, 1)], [random.uniform(-1, 1) for i in range(2)],
+               [random.uniform(-1, 1) for i in range((numInp+1) * 2)]][::-1]
+    # wSample = [[0.3], [0.3 for i in range(2)],
+    #            [0.3 for i in range((len(lst[0])) * 2)]][::-1]
+  else:
+    wSample = [[random.uniform(-1, 1) for i in range(nodes)], [random.uniform(-1, 1) for i in range(3*nodes)],
+               [random.uniform(-1, 1) for i in range((numInp + 1) * 3)]][::-1]
+    # wSample = [[0.3 for i in range(nodes)], [0.3 for i in range(6)],
+    #            [0.3 for i in range((numInp + 1) * 3)]][::-1]
+    # wSample = [[4, -3, -6, 5], [1.1, 1.2, -1.3, -1.4, 1.5, 1.6], [0.1, -0.2, 0.3, 0.4, 0.5, -0.6], [1, -2]]
+  count = 0
+  while True:
+    count+= 1
+    for i in range(len(lst)):
+      # print('**************************************')
+      inputs, output = lst[i][:-(len(lst[0])-numInp)] + [1], t_output[i] #t is expected output
+      y, x, result = feedforward(inputs, wSample)
+      # print('AFTER FIRST FEEDFORWARD------')
+      # print('WEIGHTS', wSample)
+      # print('X VAL: ', x)
+      # print('FINAL OUTPUT: ', result)
+      x.append(result)
+      # print()
+      # print('BACKPROPAGATION-------')
+      newW = backpropagation(x, output, wSample)
+      # print('\nNEW WEIGHTS', newW)
+      wSample = [[w for w in weight] for weight in newW]
+      if count % 2000 == 0:
+        print('\nFINAL---------')
+        print(f"RUN #{count}, actual: {result}, expect: {output}")
+        if nodes == 1: print(f"Layer counts [{numInp + 1}, 2, 1, 1]")
+        else: print('Layer counts 4, 3, 2, 2')
+        for l in newW:
+          print(l)
+
 
 if __name__ == '__main__':
   main()
