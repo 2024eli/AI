@@ -3,7 +3,7 @@ import math;
 import random
 import time;
 
-# args = ['training.txt']
+args = ['training.txt']
 
 def dotProduct(v1, v2): return sum(hadamardProduct(v1, v2))
 def hadamardProduct(v1, v2): return [v1[i] * v2[i] for i in range(len(v1))]

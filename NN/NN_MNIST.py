@@ -16,25 +16,20 @@ def nextNodes(inputs, layer):
   for i in range(len(layer)//len(inputs)):
     next += [layer[i*len(inputs):(i+1)*len(inputs)]] #weights used
   nextVal = [] #the nextStuff
-  y = []
   for w in next:
     s = dotProduct(inputs, w)
-    y.append(s)
     nextVal.append(tranFunc(s))
-  return nextVal, y
+  return nextVal
 def feedforward(inputs, weights):
-  y = []
   x = []
   xVal = inputs
   x.append(xVal)
   for layer in weights[:-1]:
     xVal, yVal = nextNodes(xVal, layer)
     x.append(xVal)
-    y.append(yVal)
   final = weights[-1]
   finalOut = [xVal[i]*final[i] for i in range(len(xVal))]
-  y.append(finalOut)
-  return y, x, finalOut
+  return x, finalOut
 def check(t, y):
   max = -1e9
   maxInd = 0
@@ -116,7 +111,7 @@ def main():
       inputs, output = case[1:] + [1], case[0] #t is expected output
       t = [0 for i in range(10)]
       t[output] = 1
-      y, x, result = feedforward(inputs, wSample)
+      x, result = feedforward(inputs, wSample)
       x.append(result)
       newW = backpropagation(x, t, wSample)
       accuracy += check(t, result)
