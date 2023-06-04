@@ -4,7 +4,7 @@ import random
 import re;
 import time;
 
-args = ['G12', 'V8R35']
+# args = 'G8'.split(' ')
 
 def buildGraph(size):
   max = int(size**0.5)
@@ -66,114 +66,70 @@ def valid(row, col, ind):
   if 0 <= row < gH and 0 <= col < gW and 0 <= ind < size:
     return True
   return False
-def policy_converter(path):
-  startInd = path[0]
-  nextInd = path[1]
-  diff = nextInd - startInd
-  if diff == 1:
-    return 'E'
-  if diff == -1:
-    return 'W'
-  if diff == gW:
-    return 'S'
-  if diff == -gW:
-    return 'N'
-
-def bfs(start, goal, distances):
-  path = [goal]
-  while True:
-    potentialDist = []
-    potential = []
-    for i in range(len(dy)):
-      current = path[-1]
-      row = current // gW
-      col = current % gW
-      newR = row + dy[i]
-      newC = col + dx[i]
-      newInd = newR*gW+newC
-      if valid(newR, newC, newInd):
-        potential.append(newInd)
-        potentialDist.append(distances[newInd])
-    minVal = 1000
-    minInd = 1000
-    for ct, n in enumerate(potentialDist):
-      if n < minVal:
-        minVal = n
-        minInd = ct
-    leastDistInd = minInd
-    path.append(potential[leastDistInd])
-    if path[-1] == start:
-      break
-  return list(reversed(path))
+def policy_converter(listOfPaths):
+  condense = set()
+  for path in listOfPaths:
+    condense.add((path[-1], path[-2]))
+  directions = {gW: 'S', -gW: 'N', 1: 'E', -1:'W'}
+  direction = ''
+  for c in condense:
+    diff = c[1]-c[0]
+    direction+=directions[diff]
+  return policy_key[''.join(sorted(direction))]
 
 
-def djikstra(grid, goal, start):
-  if goal == start:
-    return [1]
-  seen = [False for i in range(size)]
-  distances = [math.inf for i in range(size)]
-  distances[start] = 0
-  current = start
-  row = current // gW
-  col = current % gW
-  while True:
-    for i in range(len(dy)):
-      newR = row + dy[i]
-      newC = col + dx[i]
-      potential = newR*gW+newC
-      if valid(newR, newC, potential):
-        if not seen[potential]: #add bound somewhere here
-          distance = distances[current]+1#add the boundary heuristic sometime later here
-          if distance < distances[potential]:
-            distances[potential] = distance
-    seen[current] = True
-    #choosing next vertex
-    next = [d for d in distances]
-    for ct, s in enumerate(seen):
-      if s == True:
-        next[ct] = math.inf
-    minVal = 1000
-    minInd = 1000
-    for ct, n in enumerate(next):
-      if n < minVal:
-        minVal = n
-        minInd = ct
-    current = minInd
-    row = current // gW
-    col = current % gW
-    if current == goal:
-      break
-  print('DJIKSTRA---------')
-  print(f"start: {start} and goal: {goal}")
-  print(distances)
-  return bfs(start, goal, distances)
-
+def djikstra(path, start, goal):
+  global minPaths, gPaths
+  # gPaths = {(i for i in g) for g in gPaths}
+  if start in path:
+    return
+  path.append(start)
+  if start == goal:
+    if len(path) < minPaths:
+      minPaths = len(path)
+      gPaths = []
+    if len(path) == minPaths:
+      gPaths.append([i for i in path])
+  else:
+    row = start // gW
+    col = start % gW
+    if valid(row+1, col, (newInd:=(row+1)*gW+col)):
+      djikstra(path, newInd, goal)
+    if valid(row-1, col, (newInd:=(row-1)*gW+col)):
+      djikstra(path, newInd, goal)
+    if valid(row, col+1, (newInd:=row*gW+col+1)):
+      djikstra(path, newInd, goal)
+    if valid(row, col-1, (newInd := row * gW + col -1)):
+      djikstra(path, newInd, goal)
+  path.pop()
 
 
 def solve(grid):
+  global minPaths, gPaths
   policy = ''
+  if not vRew:
+    return '.'*size
   for ct, i in enumerate(grid):
-    minPathLen = 10000
-    minPath = ''
+    gPaths = list()
+    minPaths = 1000
     for reward in vRew:
-      shortest_path = djikstra(grid, reward, ct)
-      print(f"Path {shortest_path}")
-      if len(shortest_path) == 1:
-        policy+='*'
-        continue
-      path_policy = policy_converter(shortest_path)
-      if minPathLen > len(shortest_path):
-        minPathLen = len(shortest_path)
-        minPath = path_policy
-    policy += minPath
-    print(policy)
+      djikstra([], reward, ct)
+      print(f"Reward {reward} start {ct} minPaths {minPaths}")
+      for path in gPaths:
+        print(path)
+    if minPaths == 1:
+      policy+= '*'
+    else:
+      policy+= policy_converter(gPaths)
+
   return policy
 
 def main():
   # process args -------
-  global indices, size, gW, gH, defRew, vRew, vBound, policy_key, dy, dx
+  global indices, size, gW, gH, defRew, vRew, vBound, policy_key, dy, dx, minPaths, gPaths
   policy_key = {'ENW': '^', 'ENS': '>', 'NSW': '<', 'ESW':'v',
-                'SW':'7', 'ES':'r','EN':'L','NW':'J','EW':'-','NS':'|', '*':'*'}
+                'SW':'7', 'ES':'r','EN':'L','NW':'J','EW':'-','NS':'|', '*':'*',
+                'N':'N', 'E':'E', 'S':'S', 'W':'W'}
   # policy_key = {{1,-2,2}: '^', {1,-1,2}: '>', {1,-1,-2}: '<', {-1,2,-2}:'v',
   #               {-1,-2}:'7', {-1,2}:'r', {1,2}:'L', {1,-2}:'J', {-2,2}:'-', {1,-1}:'|'}
   # policy_key = ['N','W','S','E']
