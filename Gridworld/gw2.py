@@ -4,7 +4,7 @@ import random
 import re;
 import time;
 
-# args = 'G8'.split(' ')
+# args = 'GG100 V48,43,28,91,10,67,8,6R11B V68,11R21 V85,90,63,70,17,98,61,67,40,75,1R55BB V94R37 V62,27,66,34R32 V18,77R83'.split(' ')
 
 def buildGraph(size):
   max = int(size**0.5)
@@ -45,7 +45,6 @@ def stringSlc(slice, arr):
 def findBoundarySet(arrSlices):
   bndSet = list()
   listOfSlicedIndices = []
-  print(arrSlices)
   for slc in arrSlices:
     listOfSlicedIndices += stringSlc(slc, indices)
   print("listOfSlicedIndices", listOfSlicedIndices)
@@ -56,18 +55,23 @@ def findBoundarySet(arrSlices):
       newR = row + dy[ct]
       newC = col + dx[ct]
       ind = newR * gW + newC
-      if valid(newR, newC, ind):
+      if valid(newR, newC, ind, -1):
         if dy[ct]+dx[ct] > 0:
           bndSet.append(f"{i}:{ind}")
         else:
           bndSet.append(f"{ind}:{i}")
   return bndSet
-def valid(row, col, ind):
-  if 0 <= row < gH and 0 <= col < gW and 0 <= ind < size:
-    return True
+def valid(newR, newC, newInd, ind):
+  if 0 <= newR < gH and 0 <= newC < gW and 0 <= newInd < size:
+    if ind == -1: return True
+    stringSlice = f"{newInd}:{ind}" if newInd < ind else f"{ind}:{newInd}"
+    if stringSlice not in vBound:
+      return True
   return False
 def policy_converter(listOfPaths):
   condense = set()
+  if listOfPaths == []:
+    return "*"
   for path in listOfPaths:
     condense.add((path[-1], path[-2]))
   directions = {gW: 'S', -gW: 'N', 1: 'E', -1:'W'}
@@ -80,7 +84,6 @@ def policy_converter(listOfPaths):
 
 def djikstra(path, start, goal):
   global minPaths, gPaths
-  # gPaths = {(i for i in g) for g in gPaths}
   if start in path:
     return
   path.append(start)
@@ -93,13 +96,13 @@ def djikstra(path, start, goal):
   else:
     row = start // gW
     col = start % gW
-    if valid(row+1, col, (newInd:=(row+1)*gW+col)):
+    if valid(row+1, col, (newInd:=(row+1)*gW+col), start):
       djikstra(path, newInd, goal)
-    if valid(row-1, col, (newInd:=(row-1)*gW+col)):
+    if valid(row-1, col, (newInd:=(row-1)*gW+col), start):
       djikstra(path, newInd, goal)
-    if valid(row, col+1, (newInd:=row*gW+col+1)):
+    if valid(row, col+1, (newInd:=row*gW+col+1), start):
       djikstra(path, newInd, goal)
-    if valid(row, col-1, (newInd := row * gW + col -1)):
+    if valid(row, col-1, (newInd := row * gW + col -1), start):
       djikstra(path, newInd, goal)
   path.pop()
 
@@ -114,9 +117,9 @@ def solve(grid):
     minPaths = 1000
     for reward in vRew:
       djikstra([], reward, ct)
-      print(f"Reward {reward} start {ct} minPaths {minPaths}")
-      for path in gPaths:
-        print(path)
+      # print(f"Reward {reward} start {ct} minPath {minPaths}")
+      # for path in gPaths:
+      #   print(path)
     if minPaths == 1:
       policy+= '*'
     else:
@@ -127,7 +130,7 @@ def solve(grid):
 def main():
   # process args -------
   global indices, size, gW, gH, defRew, vRew, vBound, policy_key, dy, dx, minPaths, gPaths
-  policy_key = {'ENW': '^', 'ENS': '>', 'NSW': '<', 'ESW':'v',
+  policy_key = {'ENW': '^', 'ENS': '>', 'NSW': '<', 'ESW':'v', 'ENSW': '+',
                 'SW':'7', 'ES':'r','EN':'L','NW':'J','EW':'-','NS':'|', '*':'*',
                 'N':'N', 'E':'E', 'S':'S', 'W':'W'}
   # policy_key = {{1,-2,2}: '^', {1,-1,2}: '>', {1,-1,-2}: '<', {-1,2,-2}:'v',
@@ -147,7 +150,7 @@ def main():
   indices = [i for i in range(size)]
   print(indices)
   for arg in args[1:]:
-    if (result:=(re.search('^V.*?(R(\d*))?(B)?$', arg))): #V vSlices (R[#]|B)
+    if (result:=(re.search('^V.*?(R(\d*))?(B+)?$', arg))): #V vSlices (R[#]|B)
       print(result.groups())
       reward = int(result.group(2)) if result.group(2) else None
       B = True if result.group(3) else False
