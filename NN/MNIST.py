@@ -25,7 +25,7 @@ def feedforward(inputs, weights):
   xVal = inputs
   x.append(xVal)
   for layer in weights[:-1]:
-    xVal, yVal = nextNodes(xVal, layer)
+    xVal = nextNodes(xVal, layer)
     x.append(xVal)
   final = weights[-1]
   finalOut = [xVal[i]*final[i] for i in range(len(xVal))]
@@ -53,7 +53,7 @@ def run(weights):
     inputs, output = case[1:] + [1], case[0]  # t is expected output
     t = [0 for i in range(10)]
     t[output] = 1
-    result = feedforward(inputs, weights)[2]
+    result = feedforward(inputs, weights)[1]
     accuracy += check(t, result)
   return accuracy*100/count
 
@@ -116,7 +116,7 @@ def main():
       newW = backpropagation(x, t, wSample)
       accuracy += check(t, result)
       wSample = [[w for w in weight] for weight in newW]
-      if count % 1000 == 0:
+      if count % 100 == 0:
         print('training...')
         print(f"RUN #{count}, Accuracy: {(accuracy/count)*100:.4g}%")
       # if count % 10000 == 0:
