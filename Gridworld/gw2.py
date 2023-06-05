@@ -4,7 +4,7 @@ import random
 import re;
 import time;
 
-# args = 'GG100 V48,43,28,91,10,67,8,6R11B V68,11R21 V85,90,63,70,17,98,61,67,40,75,1R55BB V94R37 V62,27,66,34R32 V18,77R83'.split(' ')
+args = 'GG84 V28R94 V35R12 V68,18,73,1,75,36,83,65,52,37R93'.split(' ')
 
 def buildGraph(size):
   max = int(size**0.5)
@@ -74,37 +74,55 @@ def policy_converter(listOfPaths):
     return "*"
   for path in listOfPaths:
     condense.add((path[-1], path[-2]))
-  directions = {gW: 'S', -gW: 'N', 1: 'E', -1:'W'}
+  directions = {1: 'E', -1:'W', gW: 'S', -gW: 'N'}
   direction = ''
   for c in condense:
     diff = c[1]-c[0]
     direction+=directions[diff]
   return policy_key[''.join(sorted(direction))]
 
+def nbrs_helper(node):
+  nbrs = set()
+  row = node // gW
+  col = node % gW
+  for i in range(len(dy)):
+    newR = row + dy[i]
+    newC = col + dx[i]
+    newInd = newR * gW + newC
+    if valid(newR, newC, newInd, node):
+      nbrs.add(newInd)
+  return nbrs
+def nbrs(listOfNodes):
+  nbrs = {}
+  for node in listOfNodes:
+    nbrs[node] = nbrs_helper(node)
+  return nbrs
 
-def djikstra(path, start, goal):
-  global minPaths, gPaths
-  if start in path:
-    return
-  path.append(start)
-  if start == goal:
-    if len(path) < minPaths:
-      minPaths = len(path)
-      gPaths = []
-    if len(path) == minPaths:
-      gPaths.append([i for i in path])
-  else:
-    row = start // gW
-    col = start % gW
-    if valid(row+1, col, (newInd:=(row+1)*gW+col), start):
-      djikstra(path, newInd, goal)
-    if valid(row-1, col, (newInd:=(row-1)*gW+col), start):
-      djikstra(path, newInd, goal)
-    if valid(row, col+1, (newInd:=row*gW+col+1), start):
-      djikstra(path, newInd, goal)
-    if valid(row, col-1, (newInd := row * gW + col -1), start):
-      djikstra(path, newInd, goal)
-  path.pop()
+def bfs(start, goal):
+  path = [start]
+  queue = [[start]]
+  shortest_paths = []
+  shortest = math.inf
+  front = 0
+  if start == goal: return queue, 1
+  while front < len(queue):
+    newPath = queue[front] #queue.pop(0)
+    node = newPath[-1]
+    row, col = node//gW, node%gW
+    if len(newPath) > shortest:
+      break
+    for i in range(len(dy)):
+      newR, newC = row+dy[i], col+dx[i]
+      newInd = newR*gW+newC
+      if valid(newR, newC, newInd, node):
+        if newInd == goal:
+          shortest_paths.append(newPath+[newInd])
+          shortest = len(newPath)+1
+        else:
+          queue.append(newPath+[newInd])
+    front+=1
+  return shortest_paths, shortest
+
 
 
 def solve(grid):
@@ -113,18 +131,24 @@ def solve(grid):
   if not vRew:
     return '.'*size
   for ct, i in enumerate(grid):
-    gPaths = list()
-    minPaths = 1000
+    shortest = []
+    minL = 1000
     for reward in vRew:
-      djikstra([], reward, ct)
-      # print(f"Reward {reward} start {ct} minPath {minPaths}")
-      # for path in gPaths:
+      shortestPaths, minLength = bfs(ct, reward)
+      print(shortestPaths)
+      exit()
+      if minL > minLength:
+        shortest = shortestPaths
+        minL = minLength
+      if minL == minLength:
+        shortest += shortestPaths
+      # print(f"Reward/goal {reward} start {ct} minLength {minLength}")
+      # for path in shortestPaths:
       #   print(path)
-    if minPaths == 1:
+    if minL == 1:
       policy+= '*'
     else:
-      policy+= policy_converter(gPaths)
-
+      policy+= policy_converter(shortest)
   return policy
 
 def main():
@@ -133,9 +157,6 @@ def main():
   policy_key = {'ENW': '^', 'ENS': '>', 'NSW': '<', 'ESW':'v', 'ENSW': '+',
                 'SW':'7', 'ES':'r','EN':'L','NW':'J','EW':'-','NS':'|', '*':'*',
                 'N':'N', 'E':'E', 'S':'S', 'W':'W'}
-  # policy_key = {{1,-2,2}: '^', {1,-1,2}: '>', {1,-1,-2}: '<', {-1,2,-2}:'v',
-  #               {-1,-2}:'7', {-1,2}:'r', {1,2}:'L', {1,-2}:'J', {-2,2}:'-', {1,-1}:'|'}
-  # policy_key = ['N','W','S','E']
   dy = [0, 0, 1, -1]
   dx = [1, -1, 0, 0]
   vRew = dict()
@@ -148,10 +169,10 @@ def main():
       gW, gH = widthOverride, int(size / widthOverride)
     defRew = int(result.group(5)) if result.group(5) else None
   indices = [i for i in range(size)]
-  print(indices)
+  # print(indices)
   for arg in args[1:]:
     if (result:=(re.search('^V.*?(R(\d*))?(B+)?$', arg))): #V vSlices (R[#]|B)
-      print(result.groups())
+      # print(result.groups())
       reward = int(result.group(2)) if result.group(2) else None
       B = True if result.group(3) else False
       indexOfReward = arg.find(f"R{reward}")
@@ -171,10 +192,10 @@ def main():
             vRew[m] = reward if reward else defRew
     elif arg[0] == 'E':
       print("edges")
-  print(f"Reward @ Vertices: {vRew}")
-  print(f"Boundaries @ Vertices: {vBound}")
+  # print(f"Reward @ Vertices: {vRew}")
+  # print(f"Boundaries @ Vertices: {vBound}")
   grid = generate_grid()
-  print_grid(grid)
+  # print_grid(grid)
   print(f"Policy: {solve(grid)}")
 
 if __name__ == '__main__':
