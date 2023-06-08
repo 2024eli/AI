@@ -4,7 +4,7 @@ import random
 import re;
 import time;
 
-# args = 'G5 V0R54'.split(' ')
+args = 'GG90 V26R45B V89R69'.split(' ')
 
 def buildGraph(size):
   max = int(size**0.5)
@@ -97,6 +97,7 @@ def process_edge_directive1(toggle, first, connector, second, reward): #list of 
       if e in edges_ds:
         del edges_ds[e]
       else:
+        print(e)
         edges_ds[e] = reward
   #return list of (second, reward)
 def process_edge_directive2(toggle, slice, direc, connector, reward): #list of (toggle, first, connector, second, reward)
@@ -195,6 +196,8 @@ def bfs(start):
     for tup in current:
       second, back, reward = tup
       nbrs = nbrs_helper(back, secondYet, second, visited)
+      print(tup)
+      print(nbrs)
       next += nbrs
       secondYet = True
     visited.update({(t[0], t[1]) for t in current})
@@ -223,6 +226,8 @@ def solve(grid):
       policy+= '.'
     else:
       policy+= policy_converter(shortestPaths, ct)
+    print(policy)
+    exit()
   for jump in wanted_jumps:
     policy += jump + ';'
   return policy
@@ -273,6 +278,8 @@ def main():
             edges_ds[(i[1], i[0])] = None
           else:
             vBound.add(i)
+            print('vBound.add(i)', i)
+            print(edges_ds)
             if i in edges_ds: del edges_ds[i]
             if (i[1], i[0]) in edges_ds: del edges_ds[(i[1], i[0])]
       if indexOfReward and arg.find('R') != -1:
@@ -305,8 +312,8 @@ def main():
         process_edge_directive2(toggle, slice, direc, connector, reward)
 
   # print(f"Reward @ Vertices: {vRew}")
-  # print(f"Boundaries @ Vertices: {vBound}")
-  # print(f"Edges Directive: {edges_ds}")
+  print(f"Boundaries @ Vertices: {vBound}")
+  print(f"Edges Directive: {edges_ds}")
   grid = generate_grid()
   print_grid(grid)
   print(f"Policy: {solve(grid)}")

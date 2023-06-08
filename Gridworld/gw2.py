@@ -4,7 +4,7 @@ import random
 import re;
 import time;
 
-args = 'GG22R8 E+15,12,10,4=16,13,9,5R57 V13,18,0,16R57B V0,2R26B V6,20,0R91B'.split(' ')
+args = 'GG90 V26R45B V89R69'.split(' ')
 
 def buildGraph(size):
   max = int(size**0.5)
@@ -58,9 +58,9 @@ def findBoundarySet(arrSlices):
       ind = newR * gW + newC
       if valid1(newR, newC, ind):
         if dy[ct]+dx[ct] > 0:
-          bndSet.append(f"{i}:{ind}")
+          bndSet.append((i, ind))
         else:
-          bndSet.append(f"{ind}:{i}")
+          bndSet.append((ind, i))
   return bndSet
 def isValid_edge(index, direc):
   direction = {'N': -gW, 'S': gW, 'E': 1, 'W': -1}
@@ -97,6 +97,7 @@ def process_edge_directive1(toggle, first, connector, second, reward): #list of 
       if e in edges_ds:
         del edges_ds[e]
       else:
+        print(e)
         edges_ds[e] = reward
   #return list of (second, reward)
 def process_edge_directive2(toggle, slice, direc, connector, reward): #list of (toggle, first, connector, second, reward)
@@ -195,6 +196,8 @@ def bfs(start):
     for tup in current:
       second, back, reward = tup
       nbrs = nbrs_helper(back, secondYet, second, visited)
+      print(tup)
+      print(nbrs)
       next += nbrs
       secondYet = True
     visited.update({(t[0], t[1]) for t in current})
@@ -223,6 +226,8 @@ def solve(grid):
       policy+= '.'
     else:
       policy+= policy_converter(shortestPaths, ct)
+    print(policy)
+    exit()
   for jump in wanted_jumps:
     policy += jump + ';'
   return policy
@@ -247,41 +252,42 @@ def main():
       gW, gH = widthOverride, int(size / widthOverride)
     defRew = int(result.group(5)) if result.group(5) else None
   indices = [i for i in range(size)]
+
   edges_ds = dict()
   for node in range(size):
     nb = nextTo(node)
     for n in nb:
       edges_ds[(node, n)] = None
+
   for arg in args[1:]:
-    if (result:=(re.search('^V.*?(R(\d*))?(B+)?$', arg))) : #V vSlices (R[#]|B)
-      # print(result.groups())
+    if (result := (re.search('^V.*?(R(\d*))?(B+)?$', arg))):
       reward = int(result.group(2)) if result.group(2) else ''
       B = True if result.group(3) else False
       indexOfReward = None
-      if arg.find('R') != -1: indexOfReward = arg.find('R')
-      elif (result.group(3)): indexOfReward = arg.find('B')
+      if arg.find('R') != -1:
+        indexOfReward = arg.find('R')
+      elif (result.group(3)):
+        indexOfReward = arg.find('B')
       setSlices = set(arg[1:indexOfReward].split(','))
-      if B: #BOUNDARY VERTICES --------------------
-        #any intersecting edges get taken out!
-        boundSet = findBoundarySet(setSlices) #has repeating, should look like: {'1:3'} will give a boundary between this!
+      if B: #Boundary vertices----------------
+        boundSet = findBoundarySet(setSlices)
         for i in boundSet:
           if i in vBound:
             vBound = vBound - {i}
+            edges_ds[i] = None
+            edges_ds[(i[1], i[0])] = None
           else:
             vBound.add(i)
+            print('vBound.add(i)', i)
+            print(edges_ds)
+            if i in edges_ds: del edges_ds[i]
+            if (i[1], i[0]) in edges_ds: del edges_ds[(i[1], i[0])]
       if indexOfReward and arg.find('R') != -1:
         for sle in setSlices:
           slicesCover = stringSlc(sle, indices)
           for m in slicesCover:
             if defRew or reward: vRew[m] = reward if reward else defRew
-  for v in vBound:
-    vv = (int(v.split(':')[0]), int(v.split(':')[1]))
-    if vv in edges_ds:
-      del edges_ds[vv]
-    if (vv[1], vv[0]) in edges_ds:
-      del edges_ds[(vv[1], vv[0])]
-  for arg in args[1:]:
-    if (result:=(re.search('^E(\+~|\+|~)?([0-9,:]+?)([=~])(.+?)(R(\d*))?$', arg))):
+    elif (result:=(re.search('^E(\+~|\+|~)?([0-9,:]+?)([=~])(.+?)(R(\d*))?$', arg))):
       print(result.groups())
       toggle = result.group(1)
       firsts = result.group(2).split(',')
@@ -293,7 +299,7 @@ def main():
       # print((toggle, firsts, connector, seconds, reward))
       for s in range(len(firsts)):
         process_edge_directive1(toggle, firsts[s], connector, seconds[s], reward)
-    elif (result:=(re.search('^E(\+~|\+|~)?(.*?)([NSWE])([=~])(R(\d*))?$', arg))):
+    elif (result := (re.search('^E(\+~|\+|~)?(.*?)([NSWE])([=~])(R(\d*))?$', arg))):
       print(result.groups())
       toggle = result.group(1)
       slices = result.group(2).split(',')
@@ -304,6 +310,7 @@ def main():
         reward = int(result.group(6)) if result.group(6) else defRew
       for slice in slices:
         process_edge_directive2(toggle, slice, direc, connector, reward)
+
   # print(f"Reward @ Vertices: {vRew}")
   print(f"Boundaries @ Vertices: {vBound}")
   print(f"Edges Directive: {edges_ds}")
