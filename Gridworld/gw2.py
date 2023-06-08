@@ -4,7 +4,7 @@ import random
 import re;
 import time;
 
-args = 'GG27 V5R78 E13,17~14,8R52 E4,16~5,17R5 V24R53 V20,26,7R21 V17R39 E12,18=2,9R77 E+~25,19=16,20R30 E+~19=18R57'.split(' ')
+args = 'GG22R8 E+15,12,10,4=16,13,9,5R57 V13,18,0,16R57B V0,2R26B V6,20,0R91B'.split(' ')
 
 def buildGraph(size):
   max = int(size**0.5)
@@ -65,6 +65,10 @@ def findBoundarySet(arrSlices):
 def isValid_edge(index, direc):
   direction = {'N': -gW, 'S': gW, 'E': 1, 'W': -1}
   next = index+direction[direc]
+  if direc == 'E' or direc == 'W':
+    if next//gW != index//gW: return False
+  if direc == 'S' or direc == 'N':
+    if next%gW != index%gW: return False
   return valid1(next//gW, next%gW, next)
 def process_edge_directive1(toggle, first, connector, second, reward): #list of (toggle, first, connector, second, reward)
   global edges_ds #{(e1, e2, e3)
@@ -131,9 +135,6 @@ def valid(newR, newC, newInd, ind):
     if (ind, newInd) not in edges_ds:
       return False
     return True
-    # stringSlice = f"{newInd}:{ind}" if newInd < ind else f"{ind}:{newInd}"
-    # if stringSlice not in vBound:
-    #   return True
   return False
 def valid1(newR, newC, newInd):
   if 0 <= newR < gH and 0 <= newC < gW and 0 <= newInd < size:
@@ -149,25 +150,16 @@ def policy_converter(listOfPaths, ct):
   for p in listOfPaths:
     diff = p-ct
     if diff not in directions:
-      wanted_jumps.add(f"{ct}<{jumps[ct]}")
+      wanted_jumps.add(f"{ct}>{jumps[ct]}")
     else: direction+=directions[diff]
-  return policy_key[''.join(sorted(direction))] if direction else ''
+  return policy_key[''.join(sorted(direction))] if direction else '.'
+
 def nbrs_helper(node, secondYet, second, visited):
   global jumps, edges_ds
   direction = {-gW, gW, 1, -1}
   nbrs = list()
   row = node // gW
   col = node % gW
-  # for i in range(len(dy)):
-  #   newR = row + dy[i]
-  #   newC = col + dx[i]
-  #   newInd = newR * gW + newC
-  #   if valid(newR, newC, newInd, node) and (second, newInd) not in visited:
-  #     reward = None
-  #     if edges_ds and (node, newInd) in edges_ds:
-  #       reward = edges_ds[(node, newInd)]
-  #     if not secondYet: nbrs.append((newInd, newInd, reward))
-  #     else: nbrs.append((second, newInd, reward))
   for tup in edges_ds:
     if tup[0] == node and (second, tup[0]) not in visited:
       if (diff:=tup[1]-tup[0]) not in direction:
@@ -220,7 +212,7 @@ def bfs(start):
 def solve(grid):
   global wanted_jumps
   policy = ''
-  if not vRew:
+  if not vRew and not edges_ds:
     return '.'*size
   for ct, i in enumerate(grid):
     shortestPaths, minLength = bfs(ct)
@@ -282,7 +274,14 @@ def main():
           slicesCover = stringSlc(sle, indices)
           for m in slicesCover:
             if defRew or reward: vRew[m] = reward if reward else defRew
-    elif (result:=(re.search('^E(\+~|\+|~)?([0-9,:]*?)([=~])(.+?)(R(\d*))?$', arg))):
+  for v in vBound:
+    vv = (int(v.split(':')[0]), int(v.split(':')[1]))
+    if vv in edges_ds:
+      del edges_ds[vv]
+    if (vv[1], vv[0]) in edges_ds:
+      del edges_ds[(vv[1], vv[0])]
+  for arg in args[1:]:
+    if (result:=(re.search('^E(\+~|\+|~)?([0-9,:]+?)([=~])(.+?)(R(\d*))?$', arg))):
       print(result.groups())
       toggle = result.group(1)
       firsts = result.group(2).split(',')
@@ -294,8 +293,8 @@ def main():
       # print((toggle, firsts, connector, seconds, reward))
       for s in range(len(firsts)):
         process_edge_directive1(toggle, firsts[s], connector, seconds[s], reward)
-    elif (result:=(re.search('^E([+~])?(.*?)([NSWE])([=~])(R(\d*))?$', arg))):
-      # print(result.groups())
+    elif (result:=(re.search('^E(\+~|\+|~)?(.*?)([NSWE])([=~])(R(\d*))?$', arg))):
+      print(result.groups())
       toggle = result.group(1)
       slices = result.group(2).split(',')
       direc = result.group(3)
@@ -305,18 +304,8 @@ def main():
         reward = int(result.group(6)) if result.group(6) else defRew
       for slice in slices:
         process_edge_directive2(toggle, slice, direc, connector, reward)
-  for i in vBound:
-    pot = i.split(':')
-    pot_e = (int(pot[0]), int(pot[1]))
-    if pot_e in edges_ds:
-      del edges_ds[pot_e]
-    if (pot_e[1], pot_e[0]) in edges_ds:
-      del edges_ds[(pot_e[1], pot_e[0])]
-    else:
-      edges_ds[pot_e] = None
-      edges_ds[(pot_e[1], pot_e[0])] = None
   # print(f"Reward @ Vertices: {vRew}")
-  # print(f"Boundaries @ Vertices: {vBound}")
+  print(f"Boundaries @ Vertices: {vBound}")
   print(f"Edges Directive: {edges_ds}")
   grid = generate_grid()
   print_grid(grid)
