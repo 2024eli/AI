@@ -182,35 +182,12 @@ def nextTo(node):
   return nbrs
 
 def bfs(start):
-  current = [(start, start, None)] #(second, last)
-  visited = set()
-  next = []
-  shortest = set()
-  leng = 0
   if start in vRew: return None, 'RW'
-  secondYet = False
-  done = False
-  while current:
+  visited = set()
+  queue = [(start, start, None)]
+  while queue:
     leng+=1
-    next = []
-    for tup in current:
-      second, back, reward = tup
-      nbrs = nbrs_helper(back, secondYet, second, visited)
-      print(tup)
-      print(nbrs)
-      next += nbrs
-      secondYet = True
-    visited.update({(t[0], t[1]) for t in current})
-    for ct, tup in enumerate(next):
-      if tup[2]:
-        done = True
-        shortest.add(tup[0])
-      elif tup[1] in vRew:
-        done = True
-        shortest.add(tup[0])
-    if done: break
-    current = [i for i in next]
-  return shortest, leng
+    for tup
 
 def solve(grid):
   global wanted_jumps

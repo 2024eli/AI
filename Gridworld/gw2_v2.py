@@ -4,7 +4,7 @@ import random
 import re;
 import time;
 
-args = 'GG90 V26R45B V89R69'.split(' ')
+# args = 'GG12R38 V5R7 E~6,8=10,6 V6R23B'.split(' ')
 
 def buildGraph(size):
   max = int(size**0.5)
@@ -227,7 +227,6 @@ def solve(grid):
     else:
       policy+= policy_converter(shortestPaths, ct)
     print(policy)
-    exit()
   for jump in wanted_jumps:
     policy += jump + ';'
   return policy
