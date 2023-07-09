@@ -1,1 +1,3 @@
-# TJHSST AI gabobble
+# TJHSST AI 
+
+by eli
